@@ -1,0 +1,310 @@
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import './form.css'
+import { useAuth, API_URL } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
+import Sidebar from '../common/Sidebar'
+import TopUserBar from '../common/TopUserBar'
+import CustomScrollbar from '../common/CustomScrollbar'
+import ConfirmDialog from '../common/ConfirmDialog'
+
+function formatDate(value) {
+  if (!value) return ''
+  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+export default function GroupDetail() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { token } = useAuth()
+  const { theme } = useTheme()
+  const scrollRef = useRef(null)
+
+  const [group, setGroup] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [addOpen, setAddOpen] = useState(false)
+  const [cloneFrom, setCloneFrom] = useState('')
+  const [renaming, setRenaming] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+  const [pendingDeleteLocation, setPendingDeleteLocation] = useState(null)
+  const [deletingLocation, setDeletingLocation] = useState(false)
+  const [pendingDeleteGroup, setPendingDeleteGroup] = useState(false)
+  const [deletingGroup, setDeletingGroup] = useState(false)
+  const [actionError, setActionError] = useState('')
+
+  const load = async (isBackgroundRefresh) => {
+    if (!isBackgroundRefresh) setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API_URL}/groups/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) throw new Error('Could not load this group')
+      const body = await res.json()
+      setGroup(body)
+    } catch (err) {
+      setError(err.message || 'Could not load this group')
+    } finally {
+      if (!isBackgroundRefresh) setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load(false)
+    // Keeps Configuration Status / Account Onboarded fresh if edited directly in the Sheet while
+    // this page is open, same background-refresh pattern as the Dashboard.
+    const interval = setInterval(() => load(true), 5000)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, token])
+
+  const startRename = () => {
+    setNameDraft(group.clientName)
+    setRenaming(true)
+  }
+
+  const saveRename = async () => {
+    const trimmed = nameDraft.trim()
+    if (!trimmed || trimmed === group.clientName) {
+      setRenaming(false)
+      return
+    }
+    try {
+      const res = await fetch(`${API_URL}/groups/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ clientName: trimmed }),
+      })
+      if (!res.ok) throw new Error('Could not rename group')
+      const updated = await res.json()
+      setGroup((prev) => ({ ...prev, clientName: updated.clientName }))
+    } catch (err) {
+      setActionError(err.message || 'Could not rename group')
+    } finally {
+      setRenaming(false)
+    }
+  }
+
+  const confirmDeleteLocation = async () => {
+    if (!pendingDeleteLocation) return
+    setDeletingLocation(true)
+    setActionError('')
+    try {
+      const res = await fetch(`${API_URL}/submissions/${pendingDeleteLocation._id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok && res.status !== 204) throw new Error('Failed to delete location')
+      setGroup((prev) => ({ ...prev, locations: prev.locations.filter((l) => l._id !== pendingDeleteLocation._id) }))
+      setPendingDeleteLocation(null)
+    } catch (err) {
+      setActionError(err.message || 'Failed to delete location')
+    } finally {
+      setDeletingLocation(false)
+    }
+  }
+
+  const confirmDeleteGroup = async () => {
+    setDeletingGroup(true)
+    setActionError('')
+    try {
+      const res = await fetch(`${API_URL}/groups/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok && res.status !== 204) throw new Error('Failed to delete group')
+      navigate('/')
+    } catch (err) {
+      setActionError(err.message || 'Failed to delete group')
+      setDeletingGroup(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="voicestack-form dash-shell" data-theme={theme}>
+        <Sidebar />
+        <main className="dash-main">
+          <CustomScrollbar vertical className="dash-main-scroll" ref={scrollRef}>
+            <TopUserBar />
+            <div className="dash-empty">Loading group…</div>
+          </CustomScrollbar>
+        </main>
+      </div>
+    )
+  }
+
+  if (error || !group) {
+    return (
+      <div className="voicestack-form dash-shell" data-theme={theme}>
+        <Sidebar />
+        <main className="dash-main">
+          <CustomScrollbar vertical className="dash-main-scroll" ref={scrollRef}>
+            <TopUserBar />
+            <div className="info-box error">
+              <i className="ti ti-alert-circle"></i>
+              {error || 'Group not found'}
+            </div>
+            <button type="button" className="btn" onClick={() => navigate('/')}>
+              Back to Dashboard
+            </button>
+          </CustomScrollbar>
+        </main>
+      </div>
+    )
+  }
+
+  const locations = group.locations || []
+
+  return (
+    <div className="voicestack-form dash-shell" data-theme={theme}>
+      <Sidebar />
+      <main className="dash-main">
+        <CustomScrollbar vertical className="dash-main-scroll" ref={scrollRef}>
+          <TopUserBar />
+
+          <div className="dash-main-header">
+            <div>
+              <Link to="/" className="btn-sm" style={{ marginBottom: 10, display: 'inline-flex' }}>
+                <i className="ti ti-arrow-left"></i> Back to Dashboard
+              </Link>
+              {renaming ? (
+                <input
+                  type="text"
+                  value={nameDraft}
+                  autoFocus
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onBlur={saveRename}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveRename()
+                    if (e.key === 'Escape') setRenaming(false)
+                  }}
+                  style={{ fontSize: 22, fontWeight: 600, maxWidth: 420 }}
+                />
+              ) : (
+                <h1 onClick={startRename} title="Click to rename" style={{ cursor: 'pointer' }}>
+                  {group.clientName} <i className="ti ti-pencil" style={{ fontSize: 15, color: 'var(--text3)' }}></i>
+                </h1>
+              )}
+              <p>
+                Multi-location group · {locations.length} location{locations.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            <button type="button" className="btn-sm danger" onClick={() => setPendingDeleteGroup(true)}>
+              <i className="ti ti-trash"></i> Delete Group
+            </button>
+          </div>
+
+          {actionError && (
+            <div className="info-box error">
+              <i className="ti ti-alert-circle"></i>
+              {actionError}
+            </div>
+          )}
+
+          <div className="dash-table-card">
+            <div className="dash-table-toolbar">
+              <div className="dash-count-label">Locations in this group</div>
+              {!addOpen ? (
+                <button
+                  type="button"
+                  className="btn-sm"
+                  onClick={() => (locations.length === 0 ? navigate(`/groups/${id}/new`) : setAddOpen(true))}
+                >
+                  <i className="ti ti-plus"></i> Add Location
+                </button>
+              ) : (
+                <div className="add-location-panel">
+                  <Link to={`/groups/${id}/new`} className="btn-sm">
+                    <i className="ti ti-file-plus"></i> Start Blank
+                  </Link>
+                  <select value={cloneFrom} onChange={(e) => setCloneFrom(e.target.value)}>
+                    <option value="">Clone from…</option>
+                    {locations.map((l) => (
+                      <option key={l._id} value={l._id}>
+                        {l.locationName || 'Untitled'}
+                      </option>
+                    ))}
+                  </select>
+                  <Link
+                    to={cloneFrom ? `/groups/${id}/new?cloneFrom=${cloneFrom}` : '#'}
+                    className={`btn-sm ${!cloneFrom ? 'disabled' : ''}`}
+                    onClick={(e) => !cloneFrom && e.preventDefault()}
+                  >
+                    Clone
+                  </Link>
+                  <button type="button" className="btn-sm" onClick={() => setAddOpen(false)}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {locations.length === 0 ? (
+              <div className="dash-empty">
+                <i className="ti ti-map-pin-off" style={{ fontSize: 28 }}></i>
+                <p>No locations added yet. Click &quot;Add Location&quot; to get started.</p>
+              </div>
+            ) : (
+              <CustomScrollbar horizontal className="dash-table-scroll">
+                <table className="dash-table">
+                  <thead>
+                    <tr>
+                      <th>Location</th>
+                      <th>Market</th>
+                      <th>POC</th>
+                      <th>Submitted</th>
+                      <th>Specialist</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {locations.map((l) => (
+                      <tr key={l._id}>
+                        <td>{l.locationName || 'Untitled'}</td>
+                        <td>{l.market || '—'}</td>
+                        <td>{l.poc || '—'}</td>
+                        <td>{formatDate(l.createdAt)}</td>
+                        <td>{l.implementationSpecialist || '—'}</td>
+                        <td>{l.configurationStatus ? <span className="status-badge">{l.configurationStatus}</span> : '—'}</td>
+                        <td className="dash-table-actions">
+                          <Link to={`/submissions/${l._id}`} className="btn-sm">
+                            <i className="ti ti-pencil"></i> Edit
+                          </Link>
+                          <button type="button" className="btn-sm danger" onClick={() => setPendingDeleteLocation(l)}>
+                            <i className="ti ti-trash"></i> Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CustomScrollbar>
+            )}
+          </div>
+        </CustomScrollbar>
+      </main>
+
+      <ConfirmDialog
+        open={!!pendingDeleteLocation}
+        title="Delete location?"
+        message={`Are you sure you want to remove ${pendingDeleteLocation?.locationName || 'this location'}? This will also remove it from the Google Sheet and cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        busy={deletingLocation}
+        onConfirm={confirmDeleteLocation}
+        onCancel={() => setPendingDeleteLocation(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingDeleteGroup}
+        title="Delete group?"
+        message={`This will permanently delete "${group.clientName}" and all ${locations.length} of its location${
+          locations.length === 1 ? '' : 's'
+        } — from MongoDB and the Google Sheet. This cannot be undone.`}
+        confirmLabel="Delete Group"
+        danger
+        busy={deletingGroup}
+        onConfirm={confirmDeleteGroup}
+        onCancel={() => setPendingDeleteGroup(false)}
+      />
+    </div>
+  )
+}
