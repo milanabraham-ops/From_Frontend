@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { roleHome } from '../../lib/roles'
 import GoogleSignInButton from './GoogleSignInButton'
 import Blobs from '../common/Blobs'
 import logoDark from '../../assets/voicestack-logo-dark.svg'
@@ -15,17 +16,17 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  if (user) return <Navigate to={location.state?.from || '/'} replace />
+  if (user) return <Navigate to={location.state?.from || roleHome(user.role)} replace />
 
-  const redirectAfterAuth = () => navigate(location.state?.from || '/', { replace: true })
+  const redirectAfterAuth = (loggedInUser) => navigate(location.state?.from || roleHome(loggedInUser.role), { replace: true })
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSubmitting(true)
     try {
-      await login(email, password)
-      redirectAfterAuth()
+      const loggedInUser = await login(email, password)
+      redirectAfterAuth(loggedInUser)
     } catch (err) {
       setError(err.message || 'Login failed')
     } finally {
@@ -36,8 +37,8 @@ export default function LoginPage() {
   const handleGoogleCredential = async (credential) => {
     setError('')
     try {
-      await loginWithGoogle(credential)
-      redirectAfterAuth()
+      const loggedInUser = await loginWithGoogle(credential)
+      redirectAfterAuth(loggedInUser)
     } catch (err) {
       setError(err.message || 'Google sign-in failed')
     }

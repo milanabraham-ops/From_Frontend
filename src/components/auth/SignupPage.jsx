@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { roleHome } from '../../lib/roles'
 import GoogleSignInButton from './GoogleSignInButton'
 import Blobs from '../common/Blobs'
 import logoDark from '../../assets/voicestack-logo-dark.svg'
@@ -15,15 +16,15 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to={roleHome(user.role)} replace />
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSubmitting(true)
     try {
-      await register(name, email, password)
-      navigate('/', { replace: true })
+      const registeredUser = await register(name, email, password)
+      navigate(roleHome(registeredUser.role), { replace: true })
     } catch (err) {
       setError(err.message || 'Sign up failed')
     } finally {
@@ -34,8 +35,8 @@ export default function SignupPage() {
   const handleGoogleCredential = async (credential) => {
     setError('')
     try {
-      await loginWithGoogle(credential)
-      navigate('/', { replace: true })
+      const loggedInUser = await loginWithGoogle(credential)
+      navigate(roleHome(loggedInUser.role), { replace: true })
     } catch (err) {
       setError(err.message || 'Google sign-in failed')
     }
