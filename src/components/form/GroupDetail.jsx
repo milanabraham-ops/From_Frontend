@@ -13,6 +13,10 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+function statusBadgeClass(status) {
+  return `status-badge${(status || '').trim().toUpperCase() === 'ON HOLD' ? ' hold' : ''}`
+}
+
 export default function GroupDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -27,6 +31,8 @@ export default function GroupDetail() {
   const [cloneFrom, setCloneFrom] = useState('')
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
+  const [editingCount, setEditingCount] = useState(false)
+  const [countDraft, setCountDraft] = useState('')
   const [pendingDeleteLocation, setPendingDeleteLocation] = useState(null)
   const [deletingLocation, setDeletingLocation] = useState(false)
   const [pendingDeleteGroup, setPendingDeleteGroup] = useState(false)
@@ -81,6 +87,34 @@ export default function GroupDetail() {
       setActionError(err.message || 'Could not rename group')
     } finally {
       setRenaming(false)
+    }
+  }
+
+  const startEditCount = () => {
+    setCountDraft(group.expectedLocationCount ?? '')
+    setEditingCount(true)
+  }
+
+  const saveCount = async () => {
+    const trimmed = String(countDraft).trim()
+    const value = trimmed === '' ? null : Number(trimmed)
+    if (value === (group.expectedLocationCount ?? null)) {
+      setEditingCount(false)
+      return
+    }
+    try {
+      const res = await fetch(`${API_URL}/groups/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ expectedLocationCount: value }),
+      })
+      const updated = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(updated.error || 'Could not update expected location count')
+      setGroup((prev) => ({ ...prev, expectedLocationCount: updated.expectedLocationCount }))
+    } catch (err) {
+      setActionError(err.message || 'Could not update expected location count')
+    } finally {
+      setEditingCount(false)
     }
   }
 
@@ -183,7 +217,34 @@ export default function GroupDetail() {
                 </h1>
               )}
               <p>
-                Multi-location group · {locations.length} location{locations.length === 1 ? '' : 's'}
+                Multi-location group ·{' '}
+                {editingCount ? (
+                  <input
+                    type="number"
+                    min="1"
+                    value={countDraft}
+                    autoFocus
+                    onChange={(e) => setCountDraft(e.target.value)}
+                    onBlur={saveCount}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveCount()
+                      if (e.key === 'Escape') setEditingCount(false)
+                    }}
+                    style={{ width: 60 }}
+                  />
+                ) : (
+                  <>
+                    {locations.length}
+                    {group.expectedLocationCount ? ` of ${group.expectedLocationCount}` : ''} location
+                    {locations.length === 1 && !group.expectedLocationCount ? '' : 's'}{' '}
+                    <i
+                      className="ti ti-pencil"
+                      onClick={startEditCount}
+                      title="Edit expected location count"
+                      style={{ fontSize: 13, color: 'var(--text3)', cursor: 'pointer' }}
+                    ></i>
+                  </>
+                )}
               </p>
             </div>
             <button type="button" className="btn-sm danger" onClick={() => setPendingDeleteGroup(true)}>
@@ -252,6 +313,7 @@ export default function GroupDetail() {
                       <th>Submitted</th>
                       <th>Specialist</th>
                       <th>Status</th>
+                      <th>Reviewed By</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -263,7 +325,8 @@ export default function GroupDetail() {
                         <td>{l.poc || '—'}</td>
                         <td>{formatDate(l.createdAt)}</td>
                         <td>{l.implementationSpecialist || '—'}</td>
-                        <td>{l.configurationStatus ? <span className="status-badge">{l.configurationStatus}</span> : '—'}</td>
+                        <td>{l.configurationStatus ? <span className={statusBadgeClass(l.configurationStatus)}>{l.configurationStatus}</span> : '—'}</td>
+                        <td>{l.qaAgent || '—'}</td>
                         <td className="dash-table-actions">
                           <Link to={`/submissions/${l._id}`} className="btn-sm">
                             <i className="ti ti-pencil"></i> Edit
@@ -298,7 +361,7 @@ export default function GroupDetail() {
         title="Delete group?"
         message={`This will permanently delete "${group.clientName}" and all ${locations.length} of its location${
           locations.length === 1 ? '' : 's'
-        } — from MongoDB and the Google Sheet. This cannot be undone.`}
+        }, from MongoDB and the Google Sheet. This cannot be undone.`}
         confirmLabel="Delete Group"
         danger
         busy={deletingGroup}

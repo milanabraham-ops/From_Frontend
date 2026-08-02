@@ -21,6 +21,7 @@ export default function AudioScriptField({
   locationName,
   showHeader = true,
   scriptPlaceholder,
+  disabled = false,
 }) {
   return (
     <>
@@ -40,6 +41,7 @@ export default function AudioScriptField({
           ]}
           value={type}
           onChange={onTypeChange}
+          disabled={disabled}
         />
       </div>
       {type === 'Custom' && (
@@ -52,6 +54,7 @@ export default function AudioScriptField({
           practiceName={practiceName}
           locationName={locationName}
           scriptPlaceholder={scriptPlaceholder || `Type your ${title.toLowerCase()} script, or paste an audio link…`}
+          disabled={disabled}
         />
       )}
     </>

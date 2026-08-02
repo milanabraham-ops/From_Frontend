@@ -114,6 +114,11 @@ export default function FormWizard({ mode = 'create' }) {
     setData((prev) => (prev.poc ? prev : { ...prev, poc: user.name }))
   }, [isEditMode, user])
 
+  useEffect(() => {
+    if (data.environment !== 'CS Voicestack') return
+    setData((prev) => (prev.textUnification ? prev : { ...prev, textUnification: 'Yes' }))
+  }, [data.environment])
+
   const update = (keyOrPatch, value) => {
     if (typeof keyOrPatch === 'object') {
       setData((prev) => ({ ...prev, ...keyOrPatch }))

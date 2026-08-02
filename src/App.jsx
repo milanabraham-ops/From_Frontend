@@ -6,9 +6,11 @@ import RequireRole from './components/auth/RequireRole'
 import LoginPage from './components/auth/LoginPage'
 import SignupPage from './components/auth/SignupPage'
 import Dashboard from './components/dashboard/Dashboard'
+import StatsOverview from './components/dashboard/StatsOverview'
 import SpecialistQueue from './components/dashboard/SpecialistQueue'
 import QAQueue from './components/dashboard/QAQueue'
 import AdminUsers from './components/dashboard/AdminUsers'
+import AdminSettings from './components/dashboard/AdminSettings'
 import FormWizard from './components/form/FormWizard'
 import NewSubmissionEntry from './components/form/NewSubmissionEntry'
 import GroupDetail from './components/form/GroupDetail'
@@ -21,6 +23,14 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <StatsOverview />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/"
               element={
@@ -64,7 +74,7 @@ function App() {
             <Route
               path="/specialist"
               element={
-                <RequireRole roles={['specialist', 'admin']}>
+                <RequireRole roles={['specialist', 'qa', 'admin']}>
                   <SpecialistQueue />
                 </RequireRole>
               }
@@ -85,7 +95,15 @@ function App() {
                 </RequireRole>
               }
             />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route
+              path="/admin/settings"
+              element={
+                <RequireRole roles={['admin']}>
+                  <AdminSettings />
+                </RequireRole>
+              }
+            />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </AuthProvider>
       </ThemeProvider>

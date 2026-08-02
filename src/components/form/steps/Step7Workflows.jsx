@@ -15,7 +15,7 @@ export default function Step7Workflows({ data, update }) {
         <RadioGroup
           name="workflow"
           options={[
-            { value: 'Yes', label: 'Yes — configure workflows' },
+            { value: 'Yes', label: 'Yes, configure workflows' },
             { value: 'No', label: 'No' },
           ]}
           value={data.workflow}
@@ -59,7 +59,7 @@ export default function Step7Workflows({ data, update }) {
         <RadioGroup
           name="dni"
           options={[
-            { value: 'Yes', label: 'Yes — provide campaign details' },
+            { value: 'Yes', label: 'Yes, provide campaign details' },
             { value: 'No', label: 'No' },
           ]}
           value={data.dni}
@@ -115,7 +115,7 @@ export default function Step7Workflows({ data, update }) {
           onChange={(v) => update('textUnification', v)}
           row
         />
-        <div className="hint">Enabled by default for Carestack accounts.</div>
+        <div className="hint">Enabled by default when Environment is CS Voicestack.</div>
       </div>
       <div className="g2">
         <div className="field">

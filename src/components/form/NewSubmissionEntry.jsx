@@ -11,6 +11,7 @@ import FormWizard from './FormWizard'
 export default function NewSubmissionEntry() {
   const [choice, setChoice] = useState(null)
   const [clientName, setClientName] = useState('')
+  const [expectedLocationCount, setExpectedLocationCount] = useState('')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -30,7 +31,10 @@ export default function NewSubmissionEntry() {
       const res = await fetch(`${API_URL}/groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ clientName: trimmed }),
+        body: JSON.stringify({
+          clientName: trimmed,
+          expectedLocationCount: expectedLocationCount.trim() === '' ? null : Number(expectedLocationCount),
+        }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -83,6 +87,18 @@ export default function NewSubmissionEntry() {
                         placeholder="e.g. Bright Smiles Dental"
                         autoFocus
                       />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="group-location-count">Expected Number of Locations (optional)</label>
+                      <input
+                        id="group-location-count"
+                        type="number"
+                        min="1"
+                        value={expectedLocationCount}
+                        onChange={(e) => setExpectedLocationCount(e.target.value)}
+                        placeholder="e.g. 5"
+                      />
+                      <div className="hint">Just for tracking progress. You can add locations one at a time regardless, and this is editable later.</div>
                     </div>
                     {error && (
                       <div className="info-box error">

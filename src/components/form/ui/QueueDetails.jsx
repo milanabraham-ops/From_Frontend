@@ -2,7 +2,7 @@ import CheckboxGroup from './CheckboxGroup'
 import AudioSourceInput from './AudioSourceInput'
 import { QUEUE_ANNOUNCEMENTS, QUEUE_EXIT_TYPES } from '../../../data/options'
 
-export default function QueueDetails({ detail, apiUrl, practiceName, locationName, updateDetail }) {
+export default function QueueDetails({ detail, apiUrl, practiceName, locationName, updateDetail, disabled = false }) {
   return (
     <>
       <div className="g2">
@@ -12,6 +12,7 @@ export default function QueueDetails({ detail, apiUrl, practiceName, locationNam
             type="number"
             value={detail.maxDuration}
             placeholder="e.g. 300"
+            disabled={disabled}
             onChange={(e) => updateDetail('maxDuration', e.target.value)}
           />
         </div>
@@ -21,6 +22,7 @@ export default function QueueDetails({ detail, apiUrl, practiceName, locationNam
             type="number"
             value={detail.maxCallers}
             placeholder="e.g. 10"
+            disabled={disabled}
             onChange={(e) => updateDetail('maxCallers', e.target.value)}
           />
         </div>
@@ -31,12 +33,13 @@ export default function QueueDetails({ detail, apiUrl, practiceName, locationNam
           options={QUEUE_ANNOUNCEMENTS}
           value={detail.announcement}
           onChange={(v) => updateDetail('announcement', v)}
+          disabled={disabled}
         />
       </div>
       <div className="g2">
         <div className="field">
           <label>Queue Exit Type</label>
-          <select value={detail.exitType} onChange={(e) => updateDetail('exitType', e.target.value)}>
+          <select value={detail.exitType} disabled={disabled} onChange={(e) => updateDetail('exitType', e.target.value)}>
             <option value="">Select…</option>
             {QUEUE_EXIT_TYPES.map((t) => (
               <option key={t}>{t}</option>
@@ -49,6 +52,7 @@ export default function QueueDetails({ detail, apiUrl, practiceName, locationNam
             type="text"
             value={detail.exitKey}
             placeholder="e.g. 1"
+            disabled={disabled}
             onChange={(e) => updateDetail('exitKey', e.target.value)}
           />
         </div>
@@ -65,6 +69,7 @@ export default function QueueDetails({ detail, apiUrl, practiceName, locationNam
         practiceName={practiceName}
         locationName={locationName}
         scriptPlaceholder="Script, filename, or audio link if audio already exists…"
+        disabled={disabled}
       />
     </>
   )

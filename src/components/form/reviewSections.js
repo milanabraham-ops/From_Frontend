@@ -22,10 +22,42 @@ function rawAudioSummary(script, file) {
   return parts.length ? parts.join(' · ') : ''
 }
 
-function activeQueueDetail(data) {
-  const key = QUEUE_KEY_BY_VALUE[data.queueType]
-  return key ? data.queue[key] : null
+function activeQueueDetail(group) {
+  const key = QUEUE_KEY_BY_VALUE[group.queueType]
+  return key ? group.queue[key] : null
 }
+
+// One ring group's fields, reused per-entry in Step9Review since ringGroups is a repeatable
+// list rather than a fixed set of top-level fields like the other review sections.
+export const RING_GROUP_FIELDS = [
+  { label: 'Ring Type', get: (g) => g.ringType },
+  { label: 'Ring Duration (s)', get: (g) => g.ringDuration },
+  { label: 'Ring Group Users', get: (g) => g.ringGroupUsers },
+  { label: 'Shared Voicemail Group Users', get: (g) => g.svmUsers },
+  { label: 'Voicemail to Email Notification', get: (g) => g.vmEmail },
+  { label: 'Voicemail Email Addresses', get: (g) => g.vmEmailAddresses },
+  { label: 'Call Queue Type', get: (g) => g.queueType },
+  {
+    label: 'On-Hold Audio',
+    get: (g) => {
+      const q = activeQueueDetail(g)
+      return q ? audioToggleSummary(q.onholdType, q.onholdScript, q.onholdFile) : ''
+    },
+  },
+  { label: 'Max Queue Duration (s)', get: (g) => activeQueueDetail(g)?.maxDuration || '' },
+  { label: 'Max Callers in Queue', get: (g) => activeQueueDetail(g)?.maxCallers || '' },
+  { label: 'Queue Announcement', get: (g) => list(activeQueueDetail(g)?.announcement) },
+  { label: 'Queue Exit Type', get: (g) => activeQueueDetail(g)?.exitType || '' },
+  { label: 'Key to Activate Exit', get: (g) => activeQueueDetail(g)?.exitKey || '' },
+  {
+    label: 'Exit Voicemail / Call-Back Audio',
+    get: (g) => {
+      const q = activeQueueDetail(g)
+      return q ? rawAudioSummary(q.exitScript, q.exitFile) : ''
+    },
+  },
+  { label: 'Auto Dial (Queue Only)', get: (g) => g.autoDial },
+]
 
 export const REVIEW_SECTIONS = [
   {
@@ -75,39 +107,6 @@ export const REVIEW_SECTIONS = [
     ],
   },
   {
-    title: 'Ring Groups & Call Queues',
-    step: 4,
-    fields: [
-      { label: 'Ring Type', get: (d) => d.ringType },
-      { label: 'Ring Duration (s)', get: (d) => d.ringDuration },
-      { label: 'Ring Group Users', get: (d) => d.ringGroupUsers },
-      { label: 'Shared Voicemail Group Users', get: (d) => d.svmUsers },
-      { label: 'Voicemail to Email Notification', get: (d) => d.vmEmail },
-      { label: 'Voicemail Email Addresses', get: (d) => d.vmEmailAddresses },
-      { label: 'Call Queue Type', get: (d) => d.queueType },
-      {
-        label: 'On-Hold Audio',
-        get: (d) => {
-          const q = activeQueueDetail(d)
-          return q ? audioToggleSummary(q.onholdType, q.onholdScript, q.onholdFile) : ''
-        },
-      },
-      { label: 'Max Queue Duration (s)', get: (d) => activeQueueDetail(d)?.maxDuration || '' },
-      { label: 'Max Callers in Queue', get: (d) => activeQueueDetail(d)?.maxCallers || '' },
-      { label: 'Queue Announcement', get: (d) => list(activeQueueDetail(d)?.announcement) },
-      { label: 'Queue Exit Type', get: (d) => activeQueueDetail(d)?.exitType || '' },
-      { label: 'Key to Activate Exit', get: (d) => activeQueueDetail(d)?.exitKey || '' },
-      {
-        label: 'Exit Voicemail / Call-Back Audio',
-        get: (d) => {
-          const q = activeQueueDetail(d)
-          return q ? rawAudioSummary(q.exitScript, q.exitFile) : ''
-        },
-      },
-      { label: 'Auto Dial (Queue Only)', get: (d) => d.autoDial },
-    ],
-  },
-  {
     title: 'Devices, Agents & Access',
     step: 5,
     fields: [
@@ -116,7 +115,7 @@ export const REVIEW_SECTIONS = [
       { label: 'Admin Users', get: (d) => d.adminUsers },
       { label: 'AI Usage Limit', get: (d) => d.aiLimit },
       { label: 'Card Assignment Rules', get: (d) => d.cardAssignment },
-      { label: 'Card Visibility — Agent Names', get: (d) => d.cardVisibility },
+      { label: 'Card Visibility (Agent Names)', get: (d) => d.cardVisibility },
     ],
   },
   {

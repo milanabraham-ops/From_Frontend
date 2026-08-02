@@ -7,6 +7,7 @@ import CustomScrollbar from '../common/CustomScrollbar'
 import '../form/form.css'
 
 const ROLES = ['poc', 'specialist', 'qa', 'admin']
+const ROLE_LABELS = { poc: 'POC', specialist: 'Specialist', qa: 'QA', admin: 'Admin' }
 
 function formatDate(value) {
   if (!value) return ''
@@ -110,7 +111,7 @@ export default function AdminUsers() {
           <div className="dash-main-header">
             <div>
               <h1>Manage Access</h1>
-              <p>Add agents and assign roles — poc, specialist, qa, or admin — to each account.</p>
+              <p>Add agents and assign roles (POC, Specialist, QA, or Admin) to each account.</p>
             </div>
             <button type="button" className="btn-sm" onClick={() => setAddOpen((v) => !v)}>
               <i className="ti ti-user-plus"></i> Add Agent
@@ -165,7 +166,7 @@ export default function AdminUsers() {
                 >
                   {ROLES.map((role) => (
                     <option key={role} value={role}>
-                      {role}
+                      {ROLE_LABELS[role]}
                     </option>
                   ))}
                 </select>
@@ -227,7 +228,7 @@ export default function AdminUsers() {
                           >
                             {ROLES.map((role) => (
                               <option key={role} value={role}>
-                                {role}
+                                {ROLE_LABELS[role]}
                               </option>
                             ))}
                           </select>

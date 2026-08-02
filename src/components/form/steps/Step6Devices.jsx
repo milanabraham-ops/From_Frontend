@@ -69,7 +69,7 @@ export default function Step6Devices({ data, update }) {
       </div>
       <div className="field">
         <label>
-          Card Visibility — Agent Names <span className="req">*</span>
+          Card Visibility (Agent Names) <span className="req">*</span>
         </label>
         <textarea
           value={data.cardVisibility}

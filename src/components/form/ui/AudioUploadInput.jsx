@@ -1,6 +1,6 @@
 import { useFileUpload } from '../../../hooks/useFileUpload'
 
-export default function AudioUploadInput({ apiUrl, value, onChange, label = 'Upload audio file', practiceName, locationName }) {
+export default function AudioUploadInput({ apiUrl, value, onChange, label = 'Upload audio file', practiceName, locationName, disabled = false }) {
   const { upload, remove, uploading, error } = useFileUpload(apiUrl)
 
   const handleFile = async (e) => {
@@ -24,9 +24,9 @@ export default function AudioUploadInput({ apiUrl, value, onChange, label = 'Upl
     <div className="field">
       <label>{label}</label>
       <div className="upload-row">
-        <label className="btn-drive" style={{ cursor: uploading ? 'default' : 'pointer' }}>
+        <label className="btn-drive" style={{ cursor: uploading || disabled ? 'default' : 'pointer', opacity: disabled ? 0.6 : 1 }}>
           <i className="ti ti-upload"></i> {uploading ? 'Uploading…' : 'Choose audio file'}
-          <input type="file" accept="audio/*" onChange={handleFile} disabled={uploading} style={{ display: 'none' }} />
+          <input type="file" accept="audio/*" onChange={handleFile} disabled={uploading || disabled} style={{ display: 'none' }} />
         </label>
         {value?.fileId ? (
           <>
@@ -38,9 +38,11 @@ export default function AudioUploadInput({ apiUrl, value, onChange, label = 'Upl
                 <i className="ti ti-brand-google-drive"></i> View in Drive
               </a>
             )}
-            <button type="button" className="btn-sm danger" onClick={handleRemove}>
-              <i className="ti ti-trash"></i>
-            </button>
+            {!disabled && (
+              <button type="button" className="btn-sm danger" onClick={handleRemove}>
+                <i className="ti ti-trash"></i>
+              </button>
+            )}
           </>
         ) : (
           <span className="upload-fname">No file uploaded</span>

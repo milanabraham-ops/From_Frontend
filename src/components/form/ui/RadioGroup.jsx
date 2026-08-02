@@ -1,4 +1,4 @@
-export default function RadioGroup({ name, options, value, onChange, row = false }) {
+export default function RadioGroup({ name, options, value, onChange, row = false, disabled = false }) {
   return (
     <div className={row ? 'radio-group row' : 'radio-group'}>
       {options.map((opt) => {
@@ -6,12 +6,13 @@ export default function RadioGroup({ name, options, value, onChange, row = false
         const optLabel = typeof opt === 'string' ? opt : opt.label
         const checked = value === optValue
         return (
-          <label key={optValue} className={checked ? 'sel' : ''}>
+          <label key={optValue} className={`${checked ? 'sel' : ''}${disabled ? ' disabled' : ''}`}>
             <input
               type="radio"
               name={name}
               value={optValue}
               checked={checked}
+              disabled={disabled}
               onChange={() => onChange(optValue)}
             />
             {optLabel}

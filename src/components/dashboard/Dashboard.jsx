@@ -13,6 +13,10 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+function statusBadgeClass(status) {
+  return `status-badge${(status || '').trim().toUpperCase() === 'ON HOLD' ? ' hold' : ''}`
+}
+
 const COLUMNS = [
   { key: 'clientName', label: 'Client' },
   { key: 'locationName', label: 'Location' },
@@ -21,6 +25,7 @@ const COLUMNS = [
   { key: 'createdAt', label: 'Submitted' },
   { key: 'implementationSpecialist', label: 'Specialist' },
   { key: 'configurationStatus', label: 'Status' },
+  { key: 'qaAgent', label: 'Reviewed By' },
   { key: 'accountOnboarded', label: 'Onboarded' },
 ]
 
@@ -275,14 +280,17 @@ export default function Dashboard() {
                         <td>
                           <span className="group-badge">
                             <i className="ti ti-building-community"></i>
-                            Group · {r.locationCount || 0} location{r.locationCount === 1 ? '' : 's'}
+                            Group · {r.locationCount || 0}
+                            {r.expectedLocationCount ? ` of ${r.expectedLocationCount}` : ''} location
+                            {r.locationCount === 1 && !r.expectedLocationCount ? '' : 's'}
                           </span>
                         </td>
                         <td>{r.markets?.length ? r.markets.join(', ') : '—'}</td>
                         <td>{r.pocs?.length ? r.pocs.join(', ') : '—'}</td>
                         <td>{formatDate(r.mostRecentLocationAt || r.createdAt)}</td>
                         <td>{r.specialists?.length ? r.specialists.join(', ') : '—'}</td>
-                        <td>{r.configurationStatus ? <span className="status-badge">{r.configurationStatus}</span> : '—'}</td>
+                        <td>{r.configurationStatus ? <span className={statusBadgeClass(r.configurationStatus)}>{r.configurationStatus}</span> : '—'}</td>
+                        <td>{r.qaAgents?.length ? r.qaAgents.join(', ') : '—'}</td>
                         <td>{r.accountOnboarded ? <span className="status-badge">{r.accountOnboarded}</span> : '—'}</td>
                         <td className="dash-table-actions">
                           <button type="button" className="btn-sm" onClick={() => navigate(`/groups/${r._id}`)}>
@@ -301,7 +309,8 @@ export default function Dashboard() {
                         <td>{r.poc || '—'}</td>
                         <td>{formatDate(r.createdAt)}</td>
                         <td>{r.implementationSpecialist || '—'}</td>
-                        <td>{r.configurationStatus ? <span className="status-badge">{r.configurationStatus}</span> : '—'}</td>
+                        <td>{r.configurationStatus ? <span className={statusBadgeClass(r.configurationStatus)}>{r.configurationStatus}</span> : '—'}</td>
+                        <td>{r.qaAgent || '—'}</td>
                         <td>{r.accountOnboarded ? <span className="status-badge">{r.accountOnboarded}</span> : '—'}</td>
                         <td className="dash-table-actions">
                           <Link to={`/submissions/${r._id}`} className="btn-sm">
@@ -347,7 +356,7 @@ export default function Dashboard() {
         title="Delete group?"
         message={`This will permanently delete "${pendingDeleteGroup?.clientName}" and all ${
           pendingDeleteGroup?.locationCount || 0
-        } of its location${pendingDeleteGroup?.locationCount === 1 ? '' : 's'} — from MongoDB and the Google Sheet. This cannot be undone.`}
+        } of its location${pendingDeleteGroup?.locationCount === 1 ? '' : 's'}, from MongoDB and the Google Sheet. This cannot be undone.`}
         confirmLabel="Delete Group"
         danger
         busy={deletingGroup}

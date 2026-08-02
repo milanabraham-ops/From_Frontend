@@ -6,7 +6,7 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/ap
 
 function readStoredAuth() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = sessionStorage.getItem(STORAGE_KEY)
     return raw ? JSON.parse(raw) : null
   } catch {
     return null
@@ -25,17 +25,26 @@ export function AuthProvider({ children }) {
         setLoading(false)
         return
       }
+      let res
       try {
-        const res = await fetch(`${API_URL}/auth/me`, {
+        res = await fetch(`${API_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${stored.token}` },
         })
+      } catch {
+        // Network/backend unreachable — this doesn't mean the session is invalid, just that we
+        // couldn't check. Leave the cached auth as-is (already the initial state) rather than
+        // logging the user out over a backend/DB blip.
+        if (!cancelled) setLoading(false)
+        return
+      }
+      try {
         if (!res.ok) throw new Error('Session expired')
         const body = await res.json()
         if (!cancelled) setAuth({ token: stored.token, user: body.user })
       } catch {
         if (!cancelled) {
           setAuth(null)
-          localStorage.removeItem(STORAGE_KEY)
+          sessionStorage.removeItem(STORAGE_KEY)
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -49,8 +58,8 @@ export function AuthProvider({ children }) {
 
   const persist = (value) => {
     setAuth(value)
-    if (value) localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
-    else localStorage.removeItem(STORAGE_KEY)
+    if (value) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+    else sessionStorage.removeItem(STORAGE_KEY)
   }
 
   const handleAuthResponse = async (resPromise) => {

@@ -16,12 +16,23 @@
   --success: #5cc95f;
   --success-light: rgba(92, 201, 95, 0.12);
   --success-border: rgba(92, 201, 95, 0.35);
+  --warning: #eab34d;
+  --warning-light: rgba(234, 179, 77, 0.14);
+  --warning-border: rgba(234, 179, 77, 0.35);
   --danger: #f0716e;
   --danger-light: rgba(240, 113, 110, 0.12);
   --danger-border: rgba(240, 113, 110, 0.35);
   --radius: 8px;
   --radius-lg: 12px;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.25);
+  --shadow-modal: 0 8px 30px rgba(0, 0, 0, 0.25);
+
+  /* Brand mark color, lifted from the logo (the violet square) — used for the sidebar's
+     gradient wash and its own nav highlight, kept separate from --accent so the rest of the
+     app's blue interactive color is untouched. */
+  --brand-rgb: 74, 60, 225;
+  --brand-text: #9b8cf9;
 
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
   background: var(--bg2);
@@ -56,6 +67,9 @@
   --danger-light: #fdf0f0;
   --danger-border: #f0c0c0;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 8px 30px rgba(0, 0, 0, 0.12);
+  --brand-text: #4a3ce1;
 }
 
 .voicestack-form *,
@@ -180,6 +194,7 @@
 }
 .voicestack-form .radio-group label:hover, .voicestack-form .check-group label:hover { border-color: var(--border2); }
 .voicestack-form .radio-group label.sel, .voicestack-form .check-group label.sel { border-color: var(--accent); }
+.voicestack-form .radio-group label.disabled, .voicestack-form .check-group label.disabled { cursor: not-allowed; opacity: .6; }
 .voicestack-form .radio-group input[type=radio], .voicestack-form .check-group input[type=checkbox] {
   accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0;
 }
@@ -200,6 +215,25 @@
 
 /* Divider */
 .voicestack-form .divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+
+/* Repeatable ring group card (Step 5) */
+.voicestack-form .ring-group-card {
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 1.25rem; margin-bottom: 1.25rem; background: var(--surface);
+}
+.voicestack-form .ring-group-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .5rem;
+}
+.voicestack-form .ring-group-header h3 { font-size: 16px; font-weight: 600; color: var(--text); margin: 0; }
+.voicestack-form .check-inline {
+  display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2);
+  margin-bottom: .75rem; cursor: pointer;
+}
+.voicestack-form .check-inline input[type=checkbox],
+.voicestack-form .show-own-toggle input[type=checkbox] {
+  accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;
+}
 
 /* Info box */
 .voicestack-form .info-box {
@@ -335,7 +369,7 @@
 .voicestack-form .confirm-dialog {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 20px 22px; max-width: 380px; width: 100%;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+  box-shadow: var(--shadow-modal);
 }
 .voicestack-form .confirm-dialog-title { font-size: 16px; font-weight: 600; color: var(--text); margin: 0 0 8px; }
 .voicestack-form .confirm-dialog-message { font-size: 13px; color: var(--text2); margin: 0 0 18px; line-height: 1.5; }
@@ -350,6 +384,30 @@
 }
 .voicestack-form .detail-modal-sub { font-size: 13px; color: var(--text2); margin: 0 0 14px; }
 .voicestack-form .detail-modal-body { overflow-y: auto; flex: 1; margin: 0 -4px; padding: 0 4px; }
+
+/* QA Checklist */
+.voicestack-form .qa-checklist-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 0; border-bottom: 1px dashed var(--border);
+}
+.voicestack-form .qa-checklist-row:last-child { border-bottom: none; }
+.voicestack-form .qa-checklist-item-name { flex: 1; min-width: 160px; font-size: 13px; font-weight: 500; color: var(--text); }
+.voicestack-form .qa-checklist-choices { display: flex; gap: 6px; flex-shrink: 0; }
+.voicestack-form .qa-checklist-choice {
+  width: 30px; height: 30px; border-radius: var(--radius); padding: 0;
+  border: 1px solid var(--border2); background: var(--bg); color: var(--text3);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  font-size: 15px; font-family: inherit;
+  transition: border-color .15s ease, color .15s ease, background-color .15s ease;
+}
+.voicestack-form .qa-checklist-choice:hover { border-color: var(--text3); color: var(--text2); }
+.voicestack-form .qa-checklist-choice.ok.active { background: var(--success-light); border-color: var(--success-border); color: var(--success); }
+.voicestack-form .qa-checklist-choice.error.active { background: var(--danger-light); border-color: var(--danger-border); color: var(--danger); }
+.voicestack-form .qa-checklist-choice.clarification.active { background: var(--warning-light); border-color: var(--warning-border); color: var(--warning); }
+.voicestack-form .qa-checklist-choice.na.active { background: var(--bg3); border-color: var(--text3); color: var(--text2); }
+.voicestack-form .qa-checklist-note { flex-basis: 100%; min-height: 50px; font-size: 13px; }
+.voicestack-form .qa-checklist-add-row { display: flex; gap: 8px; margin-top: 12px; }
+.voicestack-form .qa-checklist-add-row .inline-edit-input { flex: 1; min-width: 0; }
 
 /* Review */
 .voicestack-form .review-section {
@@ -392,25 +450,49 @@
 .voicestack-form .dash-sidebar {
   width: 240px;
   flex-shrink: 0;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
+  /* Brand-colored regardless of light/dark theme — the sidebar is a fixed brand element,
+     lifted straight from the logo's violet square, with just a slight gradient across it. */
+  background: linear-gradient(165deg, #241f42 0%, #322a5e 100%);
+  border-right: 1px solid rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   padding: 2rem 1.25rem;
 }
-.voicestack-form .dash-sidebar-brand { margin-bottom: 2rem; font-weight: 600; color: var(--text); }
+.voicestack-form .dash-sidebar-brand { margin-bottom: 2rem; font-weight: 600; }
 .voicestack-form .dash-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .voicestack-form .dash-nav-item {
+  position: relative;
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px; border-radius: var(--radius);
-  color: var(--text2); font-size: 14px; font-weight: 500;
+  color: rgba(255, 255, 255, 0.75); font-size: 14px; font-weight: 500;
   cursor: pointer; border: none; background: none; font-family: inherit;
-  transition: background-color .15s, color .15s;
+  transition: background-color .15s ease, color .15s ease;
   width: 100%; text-align: left; text-decoration: none;
 }
-.voicestack-form .dash-nav-item:hover { background: var(--bg3); color: var(--text); }
-.voicestack-form .dash-nav-item.active { background: var(--accent-light); color: var(--accent); }
+.voicestack-form .dash-nav-item:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.voicestack-form .dash-nav-item.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-weight: 600;
+}
+.voicestack-form .dash-nav-item.active:hover { background: rgba(255, 255, 255, 0.2); }
+.voicestack-form .dash-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -1.25rem;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #fff;
+}
 .voicestack-form .dash-nav-item i { font-size: 17px; flex-shrink: 0; }
+
+/* The sidebar is always violet regardless of theme, so it always needs the light-text logo —
+   independent of the light/dark logo swap used on the auth pages' own (non-colored) .brand. */
+.voicestack-form .dash-sidebar-brand img.brand-logo-light { display: none; }
+.voicestack-form[data-theme='light'] .dash-sidebar-brand img.brand-logo-dark { display: block; }
+.voicestack-form[data-theme='light'] .dash-sidebar-brand img.brand-logo-light { display: none; }
 .voicestack-form .dash-main { flex: 1; min-width: 0; height: 100vh; overflow: hidden; }
 .voicestack-form .dash-main-scroll,
 .voicestack-form .dash-main-scroll > .custom-scrollbar-viewport { height: 100%; }
@@ -445,7 +527,7 @@
 .voicestack-form .avatar-img { border-radius: 50%; object-fit: cover; display: block; }
 .voicestack-form .avatar-fallback {
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #4a3ce1, #4c9bf5); color: #fff; font-weight: 600;
+  background: linear-gradient(135deg, rgb(var(--brand-rgb)), var(--accent)); color: #fff; font-weight: 600;
   flex-shrink: 0;
 }
 
@@ -460,7 +542,7 @@
 .voicestack-form .account-menu-panel {
   position: absolute; top: calc(100% + 10px); right: 0; z-index: 50;
   width: 260px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-popover);
   padding: 1.25rem 1rem 0.75rem; text-align: center;
 }
 .voicestack-form .account-menu-header { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 0.75rem; }
@@ -501,9 +583,22 @@
 .voicestack-form .dash-stats-row { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: stretch; }
 .voicestack-form .stat-tile {
   flex: 1; min-width: 170px;
+  display: flex; align-items: flex-start; gap: 12px;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
   padding: 1rem 1.25rem;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
+.voicestack-form .stat-tile:hover { border-color: var(--border2); box-shadow: var(--shadow); }
+.voicestack-form .stat-tile-body { min-width: 0; }
+.voicestack-form .stat-tile-icon {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.voicestack-form .stat-tile-icon.tone-accent { background: var(--accent-light); color: var(--accent); }
+.voicestack-form .stat-tile-icon.tone-success { background: var(--success-light); color: var(--success); }
+.voicestack-form .stat-tile-icon.tone-warning { background: var(--warning-light); color: var(--warning); }
+.voicestack-form .stat-tile-icon.tone-danger { background: var(--danger-light); color: var(--danger); }
+.voicestack-form .stat-tile-icon.tone-brand { background: rgba(var(--brand-rgb), 0.14); color: var(--brand-text); }
 .voicestack-form .stat-value { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1.2; }
 .voicestack-form .stat-label { font-size: 12px; color: var(--text3); margin-top: 4px; }
 
@@ -519,13 +614,41 @@
   display: flex; align-items: center; gap: 8px; flex: 1; max-width: 360px;
   border: 1px solid var(--border2); border-radius: var(--radius); padding: 0 10px;
   background: var(--bg);
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
+.voicestack-form .dash-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
 .voicestack-form .dash-search i { color: var(--text3); font-size: 15px; }
 .voicestack-form .dash-search input {
   border: none; background: transparent; padding: 8px 0; font-size: 13px;
   color: var(--text); outline: none; width: 100%;
 }
 .voicestack-form .dash-count-label { font-size: 12px; color: var(--text3); white-space: nowrap; }
+
+.voicestack-form .scope-toggle {
+  display: flex; gap: 6px;
+}
+.voicestack-form .scope-toggle-btn {
+  border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text2);
+  font-size: 12px; font-weight: 500;
+  padding: 7px 14px; cursor: pointer; transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+.voicestack-form .scope-toggle-btn:hover:not(.active) { background: var(--bg3); color: var(--text); border-color: var(--text3); }
+.voicestack-form .scope-toggle-btn.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent-ring); }
+
+.voicestack-form .show-own-toggle {
+  display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2);
+  white-space: nowrap; cursor: pointer; transition: color .15s ease;
+}
+.voicestack-form .show-own-toggle:hover { color: var(--text); }
+.voicestack-form .you-badge {
+  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 20px;
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em;
+  background: var(--accent-light); color: var(--accent);
+}
+.voicestack-form .link-btn {
+  background: none; border: none; padding: 0; color: var(--accent); font-size: 13px;
+  font-weight: 500; text-decoration: underline; cursor: pointer;
+}
 
 .voicestack-form .dash-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .voicestack-form .dash-table th {
@@ -553,17 +676,33 @@
   font-size: 12px; font-weight: 500; white-space: nowrap;
   background: var(--bg3); color: var(--text2); border: 1px solid var(--border2);
 }
+.voicestack-form .status-badge.hold { background: var(--danger-light); color: var(--danger); border-color: var(--danger-border); }
 
 .voicestack-form .inline-edit-input, .voicestack-form .inline-edit-select {
   border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg);
   color: var(--text); font-size: 13px; padding: 6px 10px; min-width: 140px;
+  transition: border-color .15s ease;
 }
+.voicestack-form .inline-edit-input:hover:not(:disabled), .voicestack-form .inline-edit-select:hover:not(:disabled) { border-color: var(--text3); }
 .voicestack-form .inline-edit-input:focus, .voicestack-form .inline-edit-select:focus { outline: none; border-color: var(--accent); }
-.voicestack-form .inline-edit-input:disabled, .voicestack-form .inline-edit-select:disabled { opacity: .6; }
+.voicestack-form .inline-edit-input:disabled, .voicestack-form .inline-edit-select:disabled { opacity: .6; cursor: not-allowed; }
+.voicestack-form .inline-edit-select.hold { border-color: var(--danger-border); color: var(--danger); }
 
 .voicestack-form .add-user-panel { padding: 1rem 1.25rem; margin-bottom: 1rem; }
 .voicestack-form .add-user-fields { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .voicestack-form .add-user-fields .inline-edit-input, .voicestack-form .add-user-fields .inline-edit-select { min-width: 160px; }
+
+/* Settings panels (Admin Settings) */
+.voicestack-form .settings-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 1.25rem; margin-bottom: 1.25rem;
+}
+.voicestack-form .settings-panel-header { margin-bottom: 1rem; }
+.voicestack-form .settings-panel-header h2 { font-size: 16px; font-weight: 600; color: var(--text); margin: 0 0 4px; }
+.voicestack-form .settings-panel-header p { font-size: 13px; color: var(--text2); margin: 0; line-height: 1.5; }
+.voicestack-form .settings-field-row + .settings-field-row { margin-top: 10px; }
+.voicestack-form .field.tight { margin-bottom: 12px; }
+.voicestack-form .settings-port-input { max-width: 100px; }
 
 @media (max-width: 800px) {
   .voicestack-form.dash-shell { flex-direction: column; }

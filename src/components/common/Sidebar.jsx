@@ -4,11 +4,13 @@ import logoLight from '../../assets/voicestack-logo.svg'
 import logoDark from '../../assets/voicestack-logo-dark.svg'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: 'ti-layout-dashboard', roles: ['poc', 'admin'] },
+  { to: '/dashboard', label: 'Dashboard', icon: 'ti-chart-bar', roles: ['poc', 'specialist', 'qa', 'admin'] },
+  { to: '/', label: 'Accounts', icon: 'ti-layout-dashboard', roles: ['poc', 'admin'] },
   { to: '/new', label: 'New Submission', icon: 'ti-plus', roles: ['poc', 'admin'] },
-  { to: '/specialist', label: 'Specialist Queue', icon: 'ti-tools', roles: ['specialist', 'admin'] },
-  { to: '/qa', label: 'QA Queue', icon: 'ti-checklist', roles: ['qa', 'admin'] },
+  { to: '/specialist', label: 'Configuration Requests', icon: 'ti-tools', roles: ['specialist', 'qa', 'admin'] },
+  { to: '/qa', label: 'QA Requests', icon: 'ti-checklist', roles: ['qa', 'admin'] },
   { to: '/admin', label: 'Manage Access', icon: 'ti-users', roles: ['admin'] },
+  { to: '/admin/settings', label: 'Notifications', icon: 'ti-bell', roles: ['admin'] },
 ]
 
 export default function Sidebar() {
@@ -19,8 +21,8 @@ export default function Sidebar() {
   return (
     <aside className="dash-sidebar">
       <div className="brand dash-sidebar-brand">
-        <img className="brand-logo-dark" src={logoDark} alt="Voicestack" height="20" />
-        <img className="brand-logo-light" src={logoLight} alt="Voicestack" height="20" />
+        <img className="brand-logo-dark" src={logoDark} alt="Voicestack" height="26" />
+        <img className="brand-logo-light" src={logoLight} alt="Voicestack" height="26" />
       </div>
       <nav className="dash-nav">
         {items.map((item) => (
