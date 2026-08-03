@@ -1,18 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useAuth, API_URL } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import CustomScrollbar from '../common/CustomScrollbar'
 import '../form/form.css'
 
 const BLANK = {
-  smtpHost: '',
-  smtpPort: 587,
-  smtpSecure: false,
-  smtpUser: '',
-  smtpPass: '',
-  emailFrom: '',
   gchatQaWebhookUrl: '',
   gchatPocWebhookUrl: '',
 }
@@ -20,12 +15,11 @@ const BLANK = {
 export default function AdminSettings() {
   const { token } = useAuth()
   const { theme } = useTheme()
+  const { showToast } = useToast()
   const [form, setForm] = useState(BLANK)
-  const [smtpPassSet, setSmtpPassSet] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -35,10 +29,7 @@ export default function AdminSettings() {
         const res = await fetch(`${API_URL}/admin/settings`, { headers: { Authorization: `Bearer ${token}` } })
         if (!res.ok) throw new Error('Failed to load settings')
         const body = await res.json()
-        if (!cancelled) {
-          setForm((f) => ({ ...f, ...body, smtpPass: '' }))
-          setSmtpPassSet(body.smtpPassSet)
-        }
+        if (!cancelled) setForm((f) => ({ ...f, ...body }))
       } catch (err) {
         if (!cancelled) setError(err.message || 'Failed to load settings')
       } finally {
@@ -53,30 +44,26 @@ export default function AdminSettings() {
 
   const update = (key, value) => {
     setForm((f) => ({ ...f, [key]: value }))
-    setSaved(false)
   }
 
   const save = async (e) => {
     e.preventDefault()
     setSaving(true)
     setError('')
-    setSaved(false)
     try {
-      // Only send smtpPass if the admin actually typed a new one — blank means "leave as is".
-      const { smtpPass, ...rest } = form
-      const payload = smtpPass ? { ...rest, smtpPass } : rest
       const res = await fetch(`${API_URL}/admin/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(form),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || 'Failed to save settings')
-      setForm((f) => ({ ...f, ...body, smtpPass: '' }))
-      setSmtpPassSet(body.smtpPassSet)
-      setSaved(true)
+      setForm((f) => ({ ...f, ...body }))
+      showToast('Settings saved.')
     } catch (err) {
-      setError(err.message || 'Failed to save settings')
+      const message = err.message || 'Failed to save settings'
+      setError(message)
+      showToast(message, 'error')
     } finally {
       setSaving(false)
     }
@@ -103,7 +90,7 @@ export default function AdminSettings() {
           <div className="dash-main-header">
             <div>
               <h1>Notification Settings</h1>
-              <p>Email and Google Chat notifications. Changes apply immediately, no restart needed.</p>
+              <p>Google Chat notifications. Changes apply immediately, no restart needed.</p>
             </div>
           </div>
 
@@ -113,64 +100,8 @@ export default function AdminSettings() {
               {error}
             </div>
           )}
-          {saved && (
-            <div className="info-box">
-              <i className="ti ti-circle-check"></i>
-              Settings saved.
-            </div>
-          )}
 
           <form onSubmit={save}>
-            <div className="settings-panel">
-              <div className="settings-panel-header">
-                <h2>Email (SMTP)</h2>
-                <p>Sent to every specialist/qa user when a new implementation request comes in.</p>
-              </div>
-              <div className="add-user-fields settings-field-row">
-                <input
-                  type="text"
-                  className="inline-edit-input"
-                  placeholder="SMTP host (e.g. smtp.gmail.com)"
-                  value={form.smtpHost}
-                  onChange={(e) => update('smtpHost', e.target.value)}
-                />
-                <input
-                  type="number"
-                  className="inline-edit-input settings-port-input"
-                  placeholder="Port"
-                  value={form.smtpPort}
-                  onChange={(e) => update('smtpPort', e.target.value)}
-                />
-                <label className="show-own-toggle">
-                  <input type="checkbox" checked={form.smtpSecure} onChange={(e) => update('smtpSecure', e.target.checked)} />
-                  Use SSL
-                </label>
-              </div>
-              <div className="add-user-fields settings-field-row">
-                <input
-                  type="text"
-                  className="inline-edit-input"
-                  placeholder="SMTP username"
-                  value={form.smtpUser}
-                  onChange={(e) => update('smtpUser', e.target.value)}
-                />
-                <input
-                  type="password"
-                  className="inline-edit-input"
-                  placeholder={smtpPassSet ? 'Password set, leave blank to keep it' : 'SMTP password'}
-                  value={form.smtpPass}
-                  onChange={(e) => update('smtpPass', e.target.value)}
-                />
-                <input
-                  type="email"
-                  className="inline-edit-input"
-                  placeholder="From address (defaults to username)"
-                  value={form.emailFrom}
-                  onChange={(e) => update('emailFrom', e.target.value)}
-                />
-              </div>
-            </div>
-
             <div className="settings-panel">
               <div className="settings-panel-header">
                 <h2>Google Chat</h2>

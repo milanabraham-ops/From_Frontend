@@ -5,6 +5,8 @@ import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import CustomScrollbar from '../common/CustomScrollbar'
 import SubmissionDetailModal from './SubmissionDetailModal'
+import MessageComposeModal from '../common/MessageComposeModal'
+import { useToast } from '../../context/ToastContext'
 import { isMine } from '../../lib/isMine'
 import '../form/form.css'
 
@@ -12,6 +14,10 @@ import '../form/form.css'
 // handoff itself — no separate "Send to QA" action. "Not Taken" and "Completed" aren't in this
 // list since they're not something a specialist sets themselves (pre-assignment / QA's call).
 const CONFIG_STATUS_OPTIONS = ['Not Started', 'In Progress', 'On Hold', 'QA']
+
+// Account Onboarded belongs to whoever is actually working the account, not just QA — a
+// specialist who learns the client's onboarding state while configuring can set it too.
+const ACCOUNT_ONBOARDED_OPTIONS = ['', 'Open', 'Closed']
 
 function formatDate(value) {
   if (!value) return ''
@@ -22,10 +28,11 @@ function normalize(value) {
   return (value || '').trim().toUpperCase()
 }
 
-// A location has left the specialist's active queue once it's reached QA/Completed, or is
-// paused mid-QA-review (On Hold with statusBeforeHold === 'QA') — a specialist-side hold
-// (statusBeforeHold is Not Started/In Progress) stays visible here, since it's still theirs.
-function isHandedOffToQA(s) {
+// A location is out of the specialist's hands once it's reached QA/Completed, or is paused
+// mid-QA-review (On Hold with statusBeforeHold === 'QA') — a specialist-side hold
+// (statusBeforeHold is Not Started/In Progress) is still theirs to edit. Every submission stays
+// visible in the table regardless (see all accounts, like admin); this only gates editing.
+function isPastSpecialistStage(s) {
   const status = normalize(s.configurationStatus)
   if (status === 'QA' || status === 'COMPLETED') return true
   return status === 'ON HOLD' && normalize(s.statusBeforeHold) === 'QA'
@@ -34,6 +41,7 @@ function isHandedOffToQA(s) {
 export default function SpecialistQueue() {
   const { token, user } = useAuth()
   const { theme } = useTheme()
+  const { showToast } = useToast()
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -41,6 +49,9 @@ export default function SpecialistQueue() {
   const [scope, setScope] = useState('all')
   const [savingId, setSavingId] = useState(null)
   const [viewing, setViewing] = useState(null)
+  const [handoffTarget, setHandoffTarget] = useState(null)
+  const [handoffMessage, setHandoffMessage] = useState('')
+  const [sendingHandoff, setSendingHandoff] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -81,10 +92,15 @@ export default function SpecialistQueue() {
         body: JSON.stringify(updates),
       })
       if (!res.ok) throw new Error('Failed to save change')
+      showToast('Saved.')
+      return true
     } catch (err) {
-      setError(err.message || 'Failed to save change')
+      const message = err.message || 'Failed to save change'
+      setError(message)
+      showToast(message, 'error')
       const revert = Object.fromEntries(Object.keys(updates).map((k) => [k, submission[k]]))
       setSubmissions((prev) => prev.map((s) => (s._id === submission._id ? { ...s, ...revert } : s)))
+      return false
     } finally {
       setSavingId(null)
     }
@@ -95,10 +111,15 @@ export default function SpecialistQueue() {
   const takeOver = (submission) =>
     saveFields(submission, { implementationSpecialist: user.name, configurationStatus: 'Not Started' })
 
-  // One dropdown drives the whole specialist-side lifecycle, including the QA handoff itself.
-  // Picking "On Hold" remembers what it was paused from; picking anything else while paused
-  // clears that memory (it's only meaningful while actually on hold).
+  // One dropdown drives the whole specialist-side lifecycle, except the QA handoff itself —
+  // picking "QA" opens the message-compose modal instead of saving directly, since that
+  // transition always posts a (editable) note to the QA/specialist Chat space.
   const changeStatus = (s, value) => {
+    if (value === 'QA') {
+      setHandoffTarget(s)
+      setHandoffMessage(`<users/all> *${s.clientName || 'Untitled'} (${s.locationName || 'Untitled location'})* has been configured by *${user.name}* and is ready for QA review.`)
+      return
+    }
     const wasOnHold = normalize(s.configurationStatus) === 'ON HOLD'
     const updates = { configurationStatus: value }
     if (value === 'On Hold') updates.statusBeforeHold = s.configurationStatus
@@ -106,11 +127,22 @@ export default function SpecialistQueue() {
     saveFields(s, updates)
   }
 
+  const confirmHandoff = async () => {
+    if (!handoffTarget) return
+    setSendingHandoff(true)
+    const wasOnHold = normalize(handoffTarget.configurationStatus) === 'ON HOLD'
+    const updates = { configurationStatus: 'QA', qaHandoffMessage: handoffMessage }
+    if (wasOnHold) updates.statusBeforeHold = ''
+    const ok = await saveFields(handoffTarget, updates)
+    setSendingHandoff(false)
+    if (ok) setHandoffTarget(null)
+  }
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    // Show requests that haven't been handed off to QA yet (or paused mid-QA-review)
-    let base = submissions.filter((s) => !isHandedOffToQA(s))
-
+    // "All" shows every account, same as admin. "Mine" is your full history — everything you've
+    // ever been the specialist on, active or long since handed off — not just your current queue.
+    let base = submissions
     if (scope === 'mine') {
       base = base.filter((s) => isMine(s.implementationSpecialist, user?.name))
     }
@@ -199,6 +231,7 @@ export default function SpecialistQueue() {
                       <th>Submitted</th>
                       <th>Specialist</th>
                       <th>Configuration Status</th>
+                      <th>Account Onboarded</th>
                       <th>QA Agent</th>
                       <th></th>
                     </tr>
@@ -207,9 +240,16 @@ export default function SpecialistQueue() {
                     {filtered.map((s) => {
                       const status = normalize(s.configurationStatus)
                       const onHold = status === 'ON HOLD'
+                      const pastStage = isPastSpecialistStage(s)
+                      const statusOptions = CONFIG_STATUS_OPTIONS.includes(s.configurationStatus)
+                        ? CONFIG_STATUS_OPTIONS
+                        : [...CONFIG_STATUS_OPTIONS, s.configurationStatus || 'Not Started']
                       return (
                         <tr key={s._id}>
-                          <td>{s.clientName || 'Untitled'}</td>
+                          <td>
+                            {s.clientName || 'Untitled'}
+                            {s.isTestData && <span className="you-badge">test</span>}
+                          </td>
                           <td>{s.locationName || '—'}</td>
                           <td>{s.market || '—'}</td>
                           <td>{s.poc || '—'}</td>
@@ -237,12 +277,26 @@ export default function SpecialistQueue() {
                             <select
                               className={`inline-edit-select${onHold ? ' hold' : ''}`}
                               value={s.configurationStatus || 'Not Started'}
-                              disabled={savingId === s._id || !s.implementationSpecialist}
+                              disabled={savingId === s._id || !s.implementationSpecialist || pastStage}
                               onChange={(e) => changeStatus(s, e.target.value)}
                             >
-                              {CONFIG_STATUS_OPTIONS.map((opt) => (
+                              {statusOptions.map((opt) => (
                                 <option key={opt} value={opt}>
                                   {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              className="inline-edit-select"
+                              value={s.accountOnboarded || ''}
+                              disabled={savingId === s._id || !s.implementationSpecialist || status === 'COMPLETED'}
+                              onChange={(e) => saveField(s, 'accountOnboarded', e.target.value)}
+                            >
+                              {ACCOUNT_ONBOARDED_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt || 'Not set'}
                                 </option>
                               ))}
                             </select>
@@ -265,6 +319,18 @@ export default function SpecialistQueue() {
       </main>
 
       <SubmissionDetailModal submission={viewing} onClose={() => setViewing(null)} />
+
+      <MessageComposeModal
+        open={!!handoffTarget}
+        title="Hand Off to QA"
+        subtitle={`${handoffTarget?.clientName || 'Untitled'} (${handoffTarget?.locationName || 'Untitled location'}) · posted to the QA/specialist Chat space`}
+        message={handoffMessage}
+        onMessageChange={setHandoffMessage}
+        busy={sendingHandoff}
+        confirmLabel="Send & Hand Off"
+        onConfirm={confirmHandoff}
+        onCancel={() => setHandoffTarget(null)}
+      />
     </div>
   )
 }

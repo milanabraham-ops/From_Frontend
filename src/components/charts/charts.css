@@ -61,8 +61,6 @@
 /* Donut */
 .voicestack-form .chart-donut-seg { transition: opacity 0.15s; cursor: pointer; }
 .voicestack-form .chart-donut-seg:hover { opacity: 0.85; }
-.voicestack-form .chart-donut-center-value { fill: var(--text); font-size: 22px; font-weight: 700; }
-.voicestack-form .chart-donut-center-label { fill: var(--text3); font-size: 11px; }
 
 /* Radar */
 .voicestack-form .chart-radar-grid { fill: none; stroke: var(--border); stroke-width: 1; }

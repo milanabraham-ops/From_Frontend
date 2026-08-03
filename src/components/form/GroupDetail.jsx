@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import './form.css'
 import { useAuth, API_URL } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import CustomScrollbar from '../common/CustomScrollbar'
@@ -22,6 +23,7 @@ export default function GroupDetail() {
   const navigate = useNavigate()
   const { token } = useAuth()
   const { theme } = useTheme()
+  const { showToast } = useToast()
   const scrollRef = useRef(null)
 
   const [group, setGroup] = useState(null)
@@ -83,8 +85,11 @@ export default function GroupDetail() {
       if (!res.ok) throw new Error('Could not rename group')
       const updated = await res.json()
       setGroup((prev) => ({ ...prev, clientName: updated.clientName }))
+      showToast('Renamed.')
     } catch (err) {
-      setActionError(err.message || 'Could not rename group')
+      const message = err.message || 'Could not rename group'
+      setActionError(message)
+      showToast(message, 'error')
     } finally {
       setRenaming(false)
     }
@@ -111,8 +116,11 @@ export default function GroupDetail() {
       const updated = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(updated.error || 'Could not update expected location count')
       setGroup((prev) => ({ ...prev, expectedLocationCount: updated.expectedLocationCount }))
+      showToast('Saved.')
     } catch (err) {
-      setActionError(err.message || 'Could not update expected location count')
+      const message = err.message || 'Could not update expected location count'
+      setActionError(message)
+      showToast(message, 'error')
     } finally {
       setEditingCount(false)
     }
@@ -129,9 +137,12 @@ export default function GroupDetail() {
       })
       if (!res.ok && res.status !== 204) throw new Error('Failed to delete location')
       setGroup((prev) => ({ ...prev, locations: prev.locations.filter((l) => l._id !== pendingDeleteLocation._id) }))
+      showToast('Location deleted.')
       setPendingDeleteLocation(null)
     } catch (err) {
-      setActionError(err.message || 'Failed to delete location')
+      const message = err.message || 'Failed to delete location'
+      setActionError(message)
+      showToast(message, 'error')
     } finally {
       setDeletingLocation(false)
     }
@@ -143,9 +154,12 @@ export default function GroupDetail() {
     try {
       const res = await fetch(`${API_URL}/groups/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
       if (!res.ok && res.status !== 204) throw new Error('Failed to delete group')
+      showToast('Group deleted.')
       navigate('/')
     } catch (err) {
-      setActionError(err.message || 'Failed to delete group')
+      const message = err.message || 'Failed to delete group'
+      setActionError(message)
+      showToast(message, 'error')
       setDeletingGroup(false)
     }
   }
@@ -214,6 +228,7 @@ export default function GroupDetail() {
               ) : (
                 <h1 onClick={startRename} title="Click to rename" style={{ cursor: 'pointer' }}>
                   {group.clientName} <i className="ti ti-pencil" style={{ fontSize: 15, color: 'var(--text3)' }}></i>
+                  {group.isTestData && <span className="you-badge">test</span>}
                 </h1>
               )}
               <p>
@@ -313,6 +328,7 @@ export default function GroupDetail() {
                       <th>Submitted</th>
                       <th>Specialist</th>
                       <th>Status</th>
+                      <th>Account Onboarded</th>
                       <th>Reviewed By</th>
                       <th></th>
                     </tr>
@@ -320,12 +336,16 @@ export default function GroupDetail() {
                   <tbody>
                     {locations.map((l) => (
                       <tr key={l._id}>
-                        <td>{l.locationName || 'Untitled'}</td>
+                        <td>
+                          {l.locationName || 'Untitled'}
+                          {l.isTestData && <span className="you-badge">test</span>}
+                        </td>
                         <td>{l.market || '—'}</td>
                         <td>{l.poc || '—'}</td>
                         <td>{formatDate(l.createdAt)}</td>
                         <td>{l.implementationSpecialist || '—'}</td>
                         <td>{l.configurationStatus ? <span className={statusBadgeClass(l.configurationStatus)}>{l.configurationStatus}</span> : '—'}</td>
+                        <td>{l.accountOnboarded ? <span className="status-badge">{l.accountOnboarded}</span> : '—'}</td>
                         <td>{l.qaAgent || '—'}</td>
                         <td className="dash-table-actions">
                           <Link to={`/submissions/${l._id}`} className="btn-sm">
@@ -348,7 +368,7 @@ export default function GroupDetail() {
       <ConfirmDialog
         open={!!pendingDeleteLocation}
         title="Delete location?"
-        message={`Are you sure you want to remove ${pendingDeleteLocation?.locationName || 'this location'}? This will also remove it from the Google Sheet and cannot be undone.`}
+        message="Are you sure about that?"
         confirmLabel="Delete"
         danger
         busy={deletingLocation}
@@ -359,9 +379,7 @@ export default function GroupDetail() {
       <ConfirmDialog
         open={pendingDeleteGroup}
         title="Delete group?"
-        message={`This will permanently delete "${group.clientName}" and all ${locations.length} of its location${
-          locations.length === 1 ? '' : 's'
-        }, from MongoDB and the Google Sheet. This cannot be undone.`}
+        message="Are you sure about that?"
         confirmLabel="Delete Group"
         danger
         busy={deletingGroup}

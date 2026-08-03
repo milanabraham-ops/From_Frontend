@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth, API_URL } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import ConfirmDialog from '../common/ConfirmDialog'
@@ -31,6 +32,7 @@ const COLUMNS = [
 
 export default function Dashboard() {
   const { token } = useAuth()
+  const { showToast } = useToast()
   const { theme } = useTheme()
   const navigate = useNavigate()
   const [submissions, setSubmissions] = useState([])
@@ -101,9 +103,12 @@ export default function Dashboard() {
       })
       if (!res.ok && res.status !== 204) throw new Error('Failed to delete submission')
       setSubmissions((prev) => prev.filter((s) => s._id !== pendingDelete._id))
+      showToast('Submission deleted.')
       setPendingDelete(null)
     } catch (err) {
-      setDeleteError(err.message || 'Failed to delete submission')
+      const message = err.message || 'Failed to delete submission'
+      setDeleteError(message)
+      showToast(message, 'error')
     } finally {
       setDeleting(false)
     }
@@ -120,9 +125,12 @@ export default function Dashboard() {
       })
       if (!res.ok && res.status !== 204) throw new Error('Failed to delete group')
       setGroups((prev) => prev.filter((g) => g._id !== pendingDeleteGroup._id))
+      showToast('Group deleted.')
       setPendingDeleteGroup(null)
     } catch (err) {
-      setDeleteError(err.message || 'Failed to delete group')
+      const message = err.message || 'Failed to delete group'
+      setDeleteError(message)
+      showToast(message, 'error')
     } finally {
       setDeletingGroup(false)
     }
@@ -276,7 +284,10 @@ export default function Dashboard() {
                   {sorted.map((r) =>
                     r.kind === 'group' ? (
                       <tr key={r._id}>
-                        <td>{r.clientName || 'Untitled'}</td>
+                        <td>
+                          {r.clientName || 'Untitled'}
+                          {r.isTestData && <span className="you-badge">test</span>}
+                        </td>
                         <td>
                           <span className="group-badge">
                             <i className="ti ti-building-community"></i>
@@ -303,7 +314,10 @@ export default function Dashboard() {
                       </tr>
                     ) : (
                       <tr key={r._id}>
-                        <td>{r.clientName || 'Untitled'}</td>
+                        <td>
+                          {r.clientName || 'Untitled'}
+                          {r.isTestData && <span className="you-badge">test</span>}
+                        </td>
                         <td>{r.locationName || '—'}</td>
                         <td>{r.market || '—'}</td>
                         <td>{r.poc || '—'}</td>
@@ -341,9 +355,7 @@ export default function Dashboard() {
       <ConfirmDialog
         open={!!pendingDelete}
         title="Delete submission?"
-        message={`Are you sure you want to remove ${pendingDelete?.clientName || 'this submission'}${
-          pendingDelete?.locationName ? ` (${pendingDelete.locationName})` : ''
-        }? This will also remove it from the Google Sheet and cannot be undone.`}
+        message="Are you sure about that?"
         confirmLabel="Delete"
         danger
         busy={deleting}
@@ -354,9 +366,7 @@ export default function Dashboard() {
       <ConfirmDialog
         open={!!pendingDeleteGroup}
         title="Delete group?"
-        message={`This will permanently delete "${pendingDeleteGroup?.clientName}" and all ${
-          pendingDeleteGroup?.locationCount || 0
-        } of its location${pendingDeleteGroup?.locationCount === 1 ? '' : 's'}, from MongoDB and the Google Sheet. This cannot be undone.`}
+        message="Are you sure about that?"
         confirmLabel="Delete Group"
         danger
         busy={deletingGroup}

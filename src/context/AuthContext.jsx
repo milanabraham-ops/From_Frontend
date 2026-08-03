@@ -102,6 +102,21 @@ export function AuthProvider({ children }) {
 
   const logout = () => persist(null)
 
+  const changePassword = async (currentPassword, newPassword) => {
+    const res = await fetch(`${API_URL}/auth/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth?.token}` },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.error || 'Could not change password')
+    }
+    const body = await res.json()
+    persist({ token: auth?.token, user: body.user })
+    return body.user
+  }
+
   const updateAvatar = async (avatarUrl) => {
     const res = await fetch(`${API_URL}/auth/me`, {
       method: 'PATCH',
@@ -128,6 +143,7 @@ export function AuthProvider({ children }) {
         loginWithGoogle,
         logout,
         updateAvatar,
+        changePassword,
       }}
     >
       {children}

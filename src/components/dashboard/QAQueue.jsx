@@ -6,6 +6,8 @@ import TopUserBar from '../common/TopUserBar'
 import CustomScrollbar from '../common/CustomScrollbar'
 import ConfirmDialog from '../common/ConfirmDialog'
 import QAReviewModal from './QAReviewModal'
+import MessageComposeModal from '../common/MessageComposeModal'
+import { useToast } from '../../context/ToastContext'
 import { isMine } from '../../lib/isMine'
 import '../form/form.css'
 
@@ -36,6 +38,7 @@ function isQAEligible(s) {
 export default function QAQueue() {
   const { token, user } = useAuth()
   const { theme } = useTheme()
+  const { showToast } = useToast()
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -47,6 +50,9 @@ export default function QAQueue() {
   const [selfReviewTarget, setSelfReviewTarget] = useState(null)
   const [completing, setCompleting] = useState(false)
   const [templateItems, setTemplateItems] = useState([])
+  const [handoverTarget, setHandoverTarget] = useState(null)
+  const [handoverMessage, setHandoverMessage] = useState('')
+  const [sendingHandover, setSendingHandover] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -76,20 +82,25 @@ export default function QAQueue() {
     }
   }, [token])
 
-  // The QA checklist template is shared and growable — fetched once so every review opens with
-  // whatever items are currently defined, including any a teammate has added since page load.
-  useEffect(() => {
-    let cancelled = false
+  // The QA checklist template is shared and growable across the whole team. A once-on-mount
+  // fetch would go stale for anyone who already had this page open when a teammate added an
+  // item, so this re-fetches on load AND every time a review is opened, not just once.
+  const loadTemplateItems = () => {
     fetch(`${API_URL}/qa-checklist-items`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => (res.ok ? res.json() : { items: [] }))
-      .then((body) => {
-        if (!cancelled) setTemplateItems(Array.isArray(body.items) ? body.items : [])
-      })
+      .then((body) => setTemplateItems(Array.isArray(body.items) ? body.items : []))
       .catch(() => {})
-    return () => {
-      cancelled = true
-    }
+  }
+
+  useEffect(() => {
+    loadTemplateItems()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
+
+  const openReview = (s) => {
+    loadTemplateItems()
+    setViewing(s)
+  }
 
   const addChecklistTemplateItem = async (name) => {
     const res = await fetch(`${API_URL}/qa-checklist-items`, {
@@ -111,7 +122,7 @@ export default function QAQueue() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submissions])
 
-  const saveFields = async (submission, updates) => {
+  const saveFields = async (submission, updates, successMessage = 'Saved.') => {
     setSubmissions((prev) => prev.map((s) => (s._id === submission._id ? { ...s, ...updates } : s)))
     setSavingId(submission._id)
     setError('')
@@ -122,9 +133,12 @@ export default function QAQueue() {
         body: JSON.stringify(updates),
       })
       if (!res.ok) throw new Error('Failed to save change')
+      showToast(successMessage)
       return true
     } catch (err) {
-      setError(err.message || 'Failed to save change')
+      const message = err.message || 'Failed to save change'
+      setError(message)
+      showToast(message, 'error')
       const revert = Object.fromEntries(Object.keys(updates).map((k) => [k, submission[k]]))
       setSubmissions((prev) => prev.map((s) => (s._id === submission._id ? { ...s, ...revert } : s)))
       return false
@@ -144,7 +158,7 @@ export default function QAQueue() {
   // here just opens that instead of saving anything by itself.
   const changeStatus = (s, value) => {
     if (value === 'Completed') {
-      setViewing(s)
+      openReview(s)
       return
     }
     const wasOnHold = normalize(s.configurationStatus) === 'ON HOLD'
@@ -154,30 +168,67 @@ export default function QAQueue() {
     saveFields(s, updates)
   }
 
-  const finalizeComplete = async (submission, checklist) => {
+  const finalizeComplete = async (submission, checklist, message) => {
     setCompleting(true)
-    const ok = await saveFields(submission, { configurationStatus: 'Completed', qaChecklist: checklist })
+    const ok = await saveFields(
+      submission,
+      { configurationStatus: 'Completed', qaChecklist: checklist, qaResultMessage: message },
+      'QA result sent.',
+    )
     setCompleting(false)
     if (ok) setViewing(null)
   }
 
   // Completing work a QA member also configured themselves gets a confirmation step first —
   // this should only happen when the rest of the team is too busy to take it instead. The
-  // checklist is already filled in by this point, so declining just returns to the review modal
-  // with nothing lost.
-  const requestMarkComplete = (checklist) => {
+  // checklist and message are already filled in by this point, so declining just returns to the
+  // review modal with nothing lost.
+  const requestMarkComplete = (checklist, message) => {
     if (!viewing) return
     if (isMine(viewing.implementationSpecialist, user?.name)) {
-      setSelfReviewTarget({ submission: viewing, checklist })
+      setSelfReviewTarget({ submission: viewing, checklist, message })
       return
     }
-    finalizeComplete(viewing, checklist)
+    finalizeComplete(viewing, checklist, message)
   }
 
   const confirmSelfReview = () => {
     const target = selfReviewTarget
     setSelfReviewTarget(null)
-    if (target) finalizeComplete(target.submission, target.checklist)
+    if (target) finalizeComplete(target.submission, target.checklist, target.message)
+  }
+
+  // Reopens a Completed account back to QA so the checklist can be redone — silent (no Chat
+  // message), since the specialist already has the original errors/clarifications and doesn't
+  // need a duplicate ping just for reopening; the NEXT completion message covers what changed.
+  const recheck = (s) => saveFields(s, { configurationStatus: 'QA', isRecheck: true }, 'Reopened for recheck.')
+
+  const startHandover = (s) => {
+    setHandoverTarget(s)
+    setHandoverMessage(
+      `<users/all> Hi Team, the implementation for *${s.clientName || 'Untitled'} (${s.locationName || 'Untitled location'})* is complete. Please reach out in case of any questions.`,
+    )
+  }
+
+  const confirmHandover = async () => {
+    if (!handoverTarget) return
+    setSendingHandover(true)
+    try {
+      const res = await fetch(`${API_URL}/submissions/${handoverTarget._id}/handover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message: handoverMessage }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Failed to send handover')
+      setSubmissions((prev) => prev.map((s) => (s._id === handoverTarget._id ? { ...s, pocHandoverAt: body.pocHandoverAt } : s)))
+      showToast('Handed over to POC.')
+      setHandoverTarget(null)
+    } catch (err) {
+      showToast(err.message || 'Failed to send handover', 'error')
+    } finally {
+      setSendingHandover(false)
+    }
   }
 
   const filtered = useMemo(() => {
@@ -188,11 +239,13 @@ export default function QAQueue() {
       // one place to look back at what you've reviewed.
       base = submissions.filter((s) => isMine(s.qaAgent, user?.name))
     } else {
-      base = submissions.filter(isQAEligible)
+      // "All" shows every account, same as admin — including ones still with the specialist or
+      // already Completed, not just what's currently sitting in the QA stage.
+      base = submissions
       if (!showOwnConfigs) {
         // A QA member who also configured this one shouldn't default into reviewing their own
         // work — it stays reachable via "Show my own configurations" for when others are busy.
-        base = base.filter((s) => !isMine(s.implementationSpecialist, user?.name))
+        base = base.filter((s) => !(isQAEligible(s) && isMine(s.implementationSpecialist, user?.name)))
       }
     }
     if (!q) return base
@@ -315,9 +368,15 @@ export default function QAQueue() {
                       const onHold = status === 'ON HOLD'
                       const isComplete = status === 'COMPLETED'
                       const taken = Boolean(s.qaAgent)
+                      // Still with the specialist — hasn't reached the QA stage yet, so there's
+                      // nothing here for QA to take over or act on. Shown for visibility only.
+                      const beforeQA = !isComplete && !isQAEligible(s)
                       return (
                         <tr key={s._id}>
-                          <td>{s.clientName || 'Untitled'}</td>
+                          <td>
+                            {s.clientName || 'Untitled'}
+                            {s.isTestData && <span className="you-badge">test</span>}
+                          </td>
                           <td>{s.locationName || '—'}</td>
                           <td>{s.market || '—'}</td>
                           <td>{formatDate(s.createdAt)}</td>
@@ -326,18 +385,22 @@ export default function QAQueue() {
                             {isMine(s.implementationSpecialist, user?.name) && <span className="you-badge">you</span>}
                           </td>
                           <td>
-                            <select
-                              className={`inline-edit-select${onHold ? ' hold' : ''}`}
-                              value={isComplete ? 'Completed' : onHold ? 'On Hold' : 'QA'}
-                              disabled={savingId === s._id || !taken || isComplete}
-                              onChange={(e) => changeStatus(s, e.target.value)}
-                            >
-                              {CONFIG_STATUS_OPTIONS.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
-                            </select>
+                            {beforeQA ? (
+                              <span className="review-value">{s.configurationStatus || 'Not Started'}</span>
+                            ) : (
+                              <select
+                                className={`inline-edit-select${onHold ? ' hold' : ''}`}
+                                value={isComplete ? 'Completed' : onHold ? 'On Hold' : 'QA'}
+                                disabled={savingId === s._id || !taken || isComplete}
+                                onChange={(e) => changeStatus(s, e.target.value)}
+                              >
+                                {CONFIG_STATUS_OPTIONS.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
                           </td>
                           <td>
                             <select
@@ -354,7 +417,9 @@ export default function QAQueue() {
                             </select>
                           </td>
                           <td>
-                            {!taken ? (
+                            {beforeQA ? (
+                              <span className="review-value empty">—</span>
+                            ) : !taken ? (
                               <button type="button" className="btn-sm" disabled={savingId === s._id} onClick={() => takeOverQA(s)}>
                                 <i className="ti ti-hand-stop"></i> Take Over
                               </button>
@@ -373,9 +438,19 @@ export default function QAQueue() {
                             )}
                           </td>
                           <td className="dash-table-actions">
-                            <button type="button" className="btn-sm" onClick={() => setViewing(s)}>
+                            <button type="button" className="btn-sm" onClick={() => openReview(s)}>
                               <i className="ti ti-eye"></i> Review
                             </button>
+                            {isComplete && (
+                              <>
+                                <button type="button" className="btn-sm" disabled={savingId === s._id} onClick={() => recheck(s)}>
+                                  <i className="ti ti-refresh"></i> Recheck
+                                </button>
+                                <button type="button" className="btn-sm" disabled={savingId === s._id} onClick={() => startHandover(s)}>
+                                  <i className="ti ti-send"></i> {s.pocHandoverAt ? 'Handover Again' : 'Handover'}
+                                </button>
+                              </>
+                            )}
                           </td>
                         </tr>
                       )
@@ -410,6 +485,18 @@ export default function QAQueue() {
         cancelLabel="Cancel"
         onConfirm={confirmSelfReview}
         onCancel={() => setSelfReviewTarget(null)}
+      />
+
+      <MessageComposeModal
+        open={!!handoverTarget}
+        title="Handover to POC"
+        subtitle={`${handoverTarget?.clientName || 'Untitled'} (${handoverTarget?.locationName || 'Untitled location'}) · posted to the POC Chat space`}
+        message={handoverMessage}
+        onMessageChange={setHandoverMessage}
+        busy={sendingHandover}
+        confirmLabel="Send Handover"
+        onConfirm={confirmHandover}
+        onCancel={() => setHandoverTarget(null)}
       />
     </div>
   )

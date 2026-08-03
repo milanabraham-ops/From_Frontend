@@ -59,6 +59,21 @@ export const RING_GROUP_FIELDS = [
   { label: 'Auto Dial (Queue Only)', get: (g) => g.autoDial },
 ]
 
+// Tracking fields (set by specialist/QA, not part of the form itself) — shown in the read-only
+// detail view (SubmissionDetailSections) but deliberately NOT in REVIEW_SECTIONS below: that
+// array is also sliced by index in Step9Review to interleave the Ring Groups section at the
+// right wizard position, and every entry there needs a real `step` for its Edit button — neither
+// of which applies here, since these fields don't exist yet on the form's own review-before-submit screen.
+export const STATUS_SECTION = {
+  title: 'Status',
+  fields: [
+    { label: 'Configuration Status', get: (d) => d.configurationStatus },
+    { label: 'Account Onboarded', get: (d) => d.accountOnboarded },
+    { label: 'Implementation Specialist', get: (d) => d.implementationSpecialist },
+    { label: 'QA Agent', get: (d) => d.qaAgent },
+  ],
+}
+
 export const REVIEW_SECTIONS = [
   {
     title: 'Account & Location',

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import SubmissionDetailSections from './SubmissionDetailSections'
+import MessageComposeModal from '../common/MessageComposeModal'
+import ConfirmDialog from '../common/ConfirmDialog'
 import { QA_CHECKLIST_ITEMS } from '../../data/options'
 
 function formatDate(value) {
@@ -24,6 +26,20 @@ function buildChecklist(templateItems, existingChecklist) {
   return merged
 }
 
+// Mirrors chatService.js's checklistSummary on the backend — used to seed the editable default
+// message shown before the QA result actually posts to Chat.
+function checklistSummary(checklist) {
+  const errors = checklist.filter((row) => row.status === 'error')
+  const clarifications = checklist.filter((row) => row.status === 'clarification')
+  if (errors.length === 0 && clarifications.length === 0) return 'No errors.'
+
+  const section = (title, items) => `${title}:\n${items.map((i) => `- ${i.item}: ${i.note || 'No detail provided'}`).join('\n')}`
+  const parts = []
+  if (errors.length > 0) parts.push(section('Errors', errors))
+  if (clarifications.length > 0) parts.push(section('Clarifications', clarifications))
+  return parts.join('\n\n')
+}
+
 // The single place a QA reviewer works from: the account's full configuration (read-only,
 // same sections as the plain detail view) plus the QA checklist, so completing an account
 // never requires switching between a "view details" modal and a separate "checklist" modal.
@@ -32,6 +48,9 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
   const [newItem, setNewItem] = useState('')
   const [addingItem, setAddingItem] = useState(false)
   const [addItemError, setAddItemError] = useState('')
+  const [composingResult, setComposingResult] = useState(false)
+  const [resultMessage, setResultMessage] = useState('')
+  const [pendingRemoveIndex, setPendingRemoveIndex] = useState(null)
 
   useEffect(() => {
     if (submission) setChecklist(buildChecklist(templateItems, submission.qaChecklist))
@@ -52,6 +71,11 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
   }
 
   const setNote = (index, note) => setChecklist((prev) => prev.map((row, i) => (i === index ? { ...row, note } : row)))
+
+  const confirmRemoveItem = () => {
+    setChecklist((prev) => prev.filter((_, i) => i !== pendingRemoveIndex))
+    setPendingRemoveIndex(null)
+  }
 
   const addItem = async () => {
     const name = newItem.trim()
@@ -77,6 +101,17 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
   const allReviewed = reviewedCount === checklist.length
   const missingNotes = checklist.some((row) => (row.status === 'error' || row.status === 'clarification') && !row.note.trim())
   const locked = alreadyComplete || busy
+
+  const label = `${submission.clientName || 'Untitled'} (${submission.locationName || 'Untitled location'})`
+
+  const startComposeResult = () => {
+    setResultMessage(`<users/all> QA review for *${label}* complete.\n\n${checklistSummary(checklist)}`)
+    setComposingResult(true)
+  }
+
+  const confirmSendResult = () => {
+    onMarkComplete(checklist, resultMessage)
+  }
 
   return (
     <div className="confirm-dialog-overlay" onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}>
@@ -143,6 +178,15 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
                   >
                     <i className="ti ti-minus"></i>
                   </button>
+                  <button
+                    type="button"
+                    className="btn-sm danger"
+                    title="Remove this item from the checklist"
+                    disabled={locked}
+                    onClick={() => setPendingRemoveIndex(i)}
+                  >
+                    <i className="ti ti-trash"></i>
+                  </button>
                 </div>
                 {(row.status === 'error' || row.status === 'clarification') && (
                   <textarea
@@ -204,7 +248,7 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
                 type="button"
                 className="btn btn-primary"
                 disabled={busy || !taken || !allReviewed || missingNotes}
-                onClick={() => onMarkComplete(checklist)}
+                onClick={startComposeResult}
               >
                 {busy ? 'Completing…' : 'Mark Complete'}
               </button>
@@ -212,6 +256,28 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
           </div>
         </div>
       </div>
+
+      <MessageComposeModal
+        open={composingResult}
+        title="QA Result"
+        subtitle={`${label} · posted to the QA/specialist Chat space`}
+        message={resultMessage}
+        onMessageChange={setResultMessage}
+        busy={busy}
+        confirmLabel="Send & Complete"
+        onConfirm={confirmSendResult}
+        onCancel={() => setComposingResult(false)}
+      />
+
+      <ConfirmDialog
+        open={pendingRemoveIndex !== null}
+        title="Remove item?"
+        message="Are you sure about that?"
+        confirmLabel="Remove"
+        danger
+        onConfirm={confirmRemoveItem}
+        onCancel={() => setPendingRemoveIndex(null)}
+      />
     </div>
   )
 }

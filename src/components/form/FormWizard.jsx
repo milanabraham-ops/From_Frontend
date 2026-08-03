@@ -4,6 +4,7 @@ import './form.css'
 import { initialFormData, TOTAL_STEPS } from '../../data/options'
 import { useAuth, API_URL } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import CustomScrollbar from '../common/CustomScrollbar'
@@ -27,6 +28,7 @@ export default function FormWizard({ mode = 'create' }) {
   const navigate = useNavigate()
   const { user, token } = useAuth()
   const { theme } = useTheme()
+  const { showToast } = useToast()
 
   const [data, setData] = useState(initialFormData)
   const [step, setStep] = useState(0)
@@ -159,8 +161,11 @@ export default function FormWizard({ mode = 'create' }) {
       setDone(true)
       setStep(TOTAL_STEPS)
       scrollToTop()
+      showToast(isEditMode ? 'Changes saved.' : 'Submitted.')
     } catch (err) {
-      setSubmitError(err.message || 'Something went wrong submitting the form. Please try again.')
+      const message = err.message || 'Something went wrong submitting the form. Please try again.'
+      setSubmitError(message)
+      showToast(message, 'error')
     } finally {
       setSubmitting(false)
     }
@@ -286,7 +291,7 @@ export default function FormWizard({ mode = 'create' }) {
                   {step === 5 && <Step6Devices {...stepProps} />}
                   {step === 6 && <Step7Workflows {...stepProps} />}
                   {step === 7 && <Step8LinksPms {...stepProps} />}
-                  {step === 8 && <Step9Review data={data} goToStep={goToStep} />}
+                  {step === 8 && <Step9Review data={data} update={update} goToStep={goToStep} isEditMode={isEditMode} />}
 
                   {submitError && (
                     <div className="info-box error">

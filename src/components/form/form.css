@@ -577,6 +577,7 @@
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;
 }
+.voicestack-form .dash-main-header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .voicestack-form .dash-main-header h1 { font-size: 20px; font-weight: 600; color: var(--text); margin: 0 0 4px; }
 .voicestack-form .dash-main-header p { font-size: 13px; color: var(--text2); margin: 0; }
 
@@ -681,12 +682,22 @@
 .voicestack-form .inline-edit-input, .voicestack-form .inline-edit-select {
   border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg);
   color: var(--text); font-size: 13px; padding: 6px 10px; min-width: 140px;
-  transition: border-color .15s ease;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 .voicestack-form .inline-edit-input:hover:not(:disabled), .voicestack-form .inline-edit-select:hover:not(:disabled) { border-color: var(--text3); }
-.voicestack-form .inline-edit-input:focus, .voicestack-form .inline-edit-select:focus { outline: none; border-color: var(--accent); }
+.voicestack-form .inline-edit-input:focus, .voicestack-form .inline-edit-select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring);
+}
 .voicestack-form .inline-edit-input:disabled, .voicestack-form .inline-edit-select:disabled { opacity: .6; cursor: not-allowed; }
 .voicestack-form .inline-edit-select.hold { border-color: var(--danger-border); color: var(--danger); }
+.voicestack-form .inline-edit-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px;
+  cursor: pointer;
+}
 
 .voicestack-form .add-user-panel { padding: 1rem 1.25rem; margin-bottom: 1rem; }
 .voicestack-form .add-user-fields { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -700,9 +711,7 @@
 .voicestack-form .settings-panel-header { margin-bottom: 1rem; }
 .voicestack-form .settings-panel-header h2 { font-size: 16px; font-weight: 600; color: var(--text); margin: 0 0 4px; }
 .voicestack-form .settings-panel-header p { font-size: 13px; color: var(--text2); margin: 0; line-height: 1.5; }
-.voicestack-form .settings-field-row + .settings-field-row { margin-top: 10px; }
 .voicestack-form .field.tight { margin-bottom: 12px; }
-.voicestack-form .settings-port-input { max-width: 100px; }
 
 @media (max-width: 800px) {
   .voicestack-form.dash-shell { flex-direction: column; }
@@ -712,7 +721,7 @@
   }
   .voicestack-form .dash-sidebar-brand { margin-bottom: 0; margin-right: 1.5rem; }
   .voicestack-form .dash-nav { flex-direction: row; flex: 0; }
-  .voicestack-form .dash-main { padding: 1.5rem 1.25rem; }
+  .voicestack-form .dash-main-scroll > .custom-scrollbar-viewport { padding: 1.5rem 1.25rem; }
 }
 
 @media (max-width: 700px) {
@@ -725,9 +734,54 @@
   .voicestack-form .card-body { padding: 1.25rem; }
   .voicestack-form .g2 { grid-template-columns: 1fr; }
   .voicestack-form .check-group { grid-template-columns: 1fr; }
+  .voicestack-form .entry-choice-row { grid-template-columns: 1fr; }
   .voicestack-form .step-dot { width: 26px; height: 26px; font-size: 11px; }
   .voicestack-form .step-labels { display: none; }
   .voicestack-form .review-label { min-width: 100%; }
   .voicestack-form .dash-table th, .voicestack-form .dash-table td { padding: 8px 12px; }
   .voicestack-form .dash-sidebar { flex-wrap: wrap; row-gap: 10px; }
+  .voicestack-form .dash-main-scroll > .custom-scrollbar-viewport { padding: 1rem .75rem; }
+  .voicestack-form .detail-modal { max-width: 100%; }
+  .voicestack-form .confirm-dialog { padding: 16px; }
+}
+
+/* Toasts — rendered by ToastProvider at the app root, above/outside any single page's own
+   .voicestack-form wrapper, so these define their own light/dark colors rather than relying on
+   that scoped variable set. */
+.toast-stack {
+  position: fixed; bottom: 20px; right: 20px; left: 20px; z-index: 2000;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+  pointer-events: none;
+}
+.toast-stack:not([data-theme='light']) {
+  --toast-bg: #171b28; --toast-text: #eef1f7; --toast-border: #262b3b;
+  --toast-success: #5cc95f; --toast-success-border: rgba(92, 201, 95, .35);
+  --toast-danger: #f0716e; --toast-danger-border: rgba(240, 113, 110, .35);
+}
+.toast-stack[data-theme='light'] {
+  --toast-bg: #ffffff; --toast-text: #1a1a2e; --toast-border: #e2e8f0;
+  --toast-success: #3b6d11; --toast-success-border: #c0dfa0;
+  --toast-danger: #a32d2d; --toast-danger-border: #f0c0c0;
+}
+.toast {
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; max-width: 360px;
+  padding: 12px 14px; border-radius: 8px;
+  background: var(--toast-bg); color: var(--toast-text); border: 1px solid var(--toast-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+  font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  animation: toast-in .18s ease;
+}
+.toast i { font-size: 16px; flex-shrink: 0; }
+.toast span { flex: 1; line-height: 1.4; }
+.toast-close { background: none; border: none; color: inherit; opacity: .6; cursor: pointer; padding: 0; display: flex; }
+.toast-close:hover { opacity: 1; }
+.toast-success { border-color: var(--toast-success-border); }
+.toast-success i { color: var(--toast-success); }
+.toast-error { border-color: var(--toast-danger-border); }
+.toast-error i { color: var(--toast-danger); }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }

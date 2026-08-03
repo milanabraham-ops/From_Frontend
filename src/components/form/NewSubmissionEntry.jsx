@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import './form.css'
 import { useAuth, API_URL } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import CustomScrollbar from '../common/CustomScrollbar'
@@ -17,6 +18,7 @@ export default function NewSubmissionEntry() {
   const navigate = useNavigate()
   const { token } = useAuth()
   const { theme } = useTheme()
+  const { showToast } = useToast()
   const scrollRef = useRef(null)
 
   if (choice === 'single') return <FormWizard mode="create" />
@@ -41,9 +43,12 @@ export default function NewSubmissionEntry() {
         throw new Error(body.error || 'Could not create group')
       }
       const group = await res.json()
+      showToast('Group created.')
       navigate(`/groups/${group._id}`)
     } catch (err) {
-      setError(err.message || 'Could not create group')
+      const message = err.message || 'Could not create group'
+      setError(message)
+      showToast(message, 'error')
     } finally {
       setCreating(false)
     }

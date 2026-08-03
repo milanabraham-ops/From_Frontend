@@ -16,7 +16,9 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  if (user) return <Navigate to={roleHome(user.role)} replace />
+  if (user) return <Navigate to={user.mustChangePassword ? '/change-password' : roleHome(user.role)} replace />
+
+  const destinationFor = (u) => (u.mustChangePassword ? '/change-password' : roleHome(u.role))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -24,7 +26,7 @@ export default function SignupPage() {
     setSubmitting(true)
     try {
       const registeredUser = await register(name, email, password)
-      navigate(roleHome(registeredUser.role), { replace: true })
+      navigate(destinationFor(registeredUser), { replace: true })
     } catch (err) {
       setError(err.message || 'Sign up failed')
     } finally {
@@ -36,7 +38,7 @@ export default function SignupPage() {
     setError('')
     try {
       const loggedInUser = await loginWithGoogle(credential)
-      navigate(roleHome(loggedInUser.role), { replace: true })
+      navigate(destinationFor(loggedInUser), { replace: true })
     } catch (err) {
       setError(err.message || 'Google sign-in failed')
     }

@@ -4,6 +4,13 @@ export default function GoogleSignInButton({ onCredential }) {
   const divRef = useRef(null)
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
+  // Read via a ref rather than listing onCredential as an effect dependency — the parent
+  // (Login/Signup page) recreates that function on every render (e.g. every keystroke in the
+  // form), and re-running Google's own initialize() that often is what triggered its
+  // "called multiple times" warning. Initializing should only happen once per mount.
+  const onCredentialRef = useRef(onCredential)
+  onCredentialRef.current = onCredential
+
   useEffect(() => {
     if (!clientId) return
     let cancelled = false
@@ -16,7 +23,7 @@ export default function GoogleSignInButton({ onCredential }) {
       }
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: (response) => onCredential(response.credential),
+        callback: (response) => onCredentialRef.current(response.credential),
       })
       if (divRef.current) {
         const width = Math.min(360, window.innerWidth - 120)
@@ -33,7 +40,7 @@ export default function GoogleSignInButton({ onCredential }) {
     return () => {
       cancelled = true
     }
-  }, [clientId, onCredential])
+  }, [clientId])
 
   if (!clientId) {
     return (

@@ -16,9 +16,14 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  if (user) return <Navigate to={location.state?.from || roleHome(user.role)} replace />
+  if (user) {
+    return <Navigate to={user.mustChangePassword ? '/change-password' : location.state?.from || roleHome(user.role)} replace />
+  }
 
-  const redirectAfterAuth = (loggedInUser) => navigate(location.state?.from || roleHome(loggedInUser.role), { replace: true })
+  const destinationFor = (loggedInUser) =>
+    loggedInUser.mustChangePassword ? '/change-password' : location.state?.from || roleHome(loggedInUser.role)
+
+  const redirectAfterAuth = (loggedInUser) => navigate(destinationFor(loggedInUser), { replace: true })
 
   const handleSubmit = async (e) => {
     e.preventDefault()

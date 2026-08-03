@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth, API_URL } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import CustomScrollbar from '../common/CustomScrollbar'
+import ConfirmDialog from '../common/ConfirmDialog'
 import '../form/form.css'
 
 const ROLES = ['poc', 'specialist', 'qa', 'admin']
@@ -14,11 +16,12 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-const BLANK_FORM = { name: '', email: '', password: '', role: 'poc' }
+const BLANK_FORM = { name: '', email: '', role: 'poc', isTestAccount: false }
 
 export default function AdminUsers() {
   const { token, user: currentUser } = useAuth()
   const { theme } = useTheme()
+  const { showToast } = useToast()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -28,6 +31,10 @@ export default function AdminUsers() {
   const [form, setForm] = useState(BLANK_FORM)
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState('')
+  const [pendingRemove, setPendingRemove] = useState(null)
+  const [removing, setRemoving] = useState(false)
+  const [purgeOpen, setPurgeOpen] = useState(false)
+  const [purging, setPurging] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -65,11 +72,36 @@ export default function AdminUsers() {
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || 'Failed to update role')
+      showToast(`Role updated for ${targetUser.name}.`)
     } catch (err) {
-      setError(err.message || 'Failed to update role')
+      const message = err.message || 'Failed to update role'
+      setError(message)
+      showToast(message, 'error')
       setUsers((prev) => prev.map((u) => (u.id === targetUser.id ? { ...u, role: targetUser.role } : u)))
     } finally {
       setSavingId(null)
+    }
+  }
+
+  const confirmRemove = async () => {
+    if (!pendingRemove) return
+    setRemoving(true)
+    try {
+      const res = await fetch(`${API_URL}/admin/users/${pendingRemove.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok && res.status !== 204) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to remove access')
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== pendingRemove.id))
+      showToast(`Access revoked for ${pendingRemove.name}.`)
+      setPendingRemove(null)
+    } catch (err) {
+      showToast(err.message || 'Failed to remove access', 'error')
+    } finally {
+      setRemoving(false)
     }
   }
 
@@ -88,10 +120,35 @@ export default function AdminUsers() {
       setUsers((prev) => [body, ...prev])
       setForm(BLANK_FORM)
       setAddOpen(false)
+      showToast(`${body.name} added.`)
     } catch (err) {
-      setAddError(err.message || 'Failed to add agent')
+      const message = err.message || 'Failed to add agent'
+      setAddError(message)
+      showToast(message, 'error')
     } finally {
       setAdding(false)
+    }
+  }
+
+  const confirmPurge = async () => {
+    setPurging(true)
+    try {
+      const res = await fetch(`${API_URL}/admin/purge-test-data`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Failed to purge test data')
+      showToast(
+        `Purged ${body.submissionsDeleted} submission${body.submissionsDeleted === 1 ? '' : 's'} and ${body.groupsDeleted} group${
+          body.groupsDeleted === 1 ? '' : 's'
+        }.`,
+      )
+      setPurgeOpen(false)
+    } catch (err) {
+      showToast(err.message || 'Failed to purge test data', 'error')
+    } finally {
+      setPurging(false)
     }
   }
 
@@ -113,9 +170,14 @@ export default function AdminUsers() {
               <h1>Manage Access</h1>
               <p>Add agents and assign roles (POC, Specialist, QA, or Admin) to each account.</p>
             </div>
-            <button type="button" className="btn-sm" onClick={() => setAddOpen((v) => !v)}>
-              <i className="ti ti-user-plus"></i> Add Agent
-            </button>
+            <div className="dash-main-header-actions">
+              <button type="button" className="btn-sm danger" onClick={() => setPurgeOpen(true)}>
+                <i className="ti ti-trash"></i> Purge Test Data
+              </button>
+              <button type="button" className="btn-sm" onClick={() => setAddOpen((v) => !v)}>
+                <i className="ti ti-user-plus"></i> Add Agent
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -150,15 +212,6 @@ export default function AdminUsers() {
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 />
-                <input
-                  type="password"
-                  className="inline-edit-input"
-                  placeholder="Temporary password (min 8 chars)"
-                  required
-                  minLength={8}
-                  value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                />
                 <select
                   className="inline-edit-select"
                   value={form.role}
@@ -170,12 +223,24 @@ export default function AdminUsers() {
                     </option>
                   ))}
                 </select>
+                <label className="show-own-toggle">
+                  <input
+                    type="checkbox"
+                    checked={form.isTestAccount}
+                    onChange={(e) => setForm((f) => ({ ...f, isTestAccount: e.target.checked }))}
+                  />
+                  Test account
+                </label>
                 <button type="submit" className="btn-sm" disabled={adding}>
                   {adding ? 'Adding…' : 'Add Agent'}
                 </button>
                 <button type="button" className="btn-sm" onClick={() => setAddOpen(false)}>
                   Cancel
                 </button>
+              </div>
+              <div className="hint">
+                New accounts start with the default password (12345678) and must change it on first login. Test accounts have full
+                functionality but their submissions can be bulk-purged with the button above.
               </div>
             </form>
           )}
@@ -211,12 +276,16 @@ export default function AdminUsers() {
                       <th>Email</th>
                       <th>Joined</th>
                       <th>Role</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map((u) => (
                       <tr key={u.id}>
-                        <td>{u.name}</td>
+                        <td>
+                          {u.name}
+                          {u.isTestAccount && <span className="you-badge">test</span>}
+                        </td>
                         <td>{u.email}</td>
                         <td>{formatDate(u.createdAt)}</td>
                         <td>
@@ -233,6 +302,17 @@ export default function AdminUsers() {
                             ))}
                           </select>
                         </td>
+                        <td className="dash-table-actions">
+                          <button
+                            type="button"
+                            className="btn-sm danger"
+                            disabled={u.id === currentUser?.id}
+                            title={u.id === currentUser?.id ? "You can't remove your own access" : undefined}
+                            onClick={() => setPendingRemove(u)}
+                          >
+                            <i className="ti ti-user-x"></i> Remove
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -242,6 +322,28 @@ export default function AdminUsers() {
           </div>
         </CustomScrollbar>
       </main>
+
+      <ConfirmDialog
+        open={!!pendingRemove}
+        title="Revoke access?"
+        message="Are you sure about that?"
+        confirmLabel="Remove Access"
+        danger
+        busy={removing}
+        onConfirm={confirmRemove}
+        onCancel={() => setPendingRemove(null)}
+      />
+
+      <ConfirmDialog
+        open={purgeOpen}
+        title="Purge test data?"
+        message="Are you sure about that?"
+        confirmLabel="Purge Everything"
+        danger
+        busy={purging}
+        onConfirm={confirmPurge}
+        onCancel={() => setPurgeOpen(false)}
+      />
     </div>
   )
 }

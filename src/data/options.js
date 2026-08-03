@@ -185,4 +185,7 @@ export const initialFormData = {
   additionalNotes: '',
   pms: '',
   serverAccess: '',
+  // Step 9 — message posted to the POC's own Chat space on submit, editable before sending.
+  // Not a Submission schema field; the backend reads it once off the create request and discards it.
+  pocMessage: '',
 }

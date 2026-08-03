@@ -6,26 +6,10 @@ export const CATEGORICAL = {
   dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
 }
 
-// Ordinal ramp for the Configuration Status funnel (Not Taken -> Not Started -> In Progress ->
-// On Hold -> QA -> Completed) — one hue, monotone lightness, since the order of these buckets
-// is meaningful. Steps drawn from the validated sequential ramp (see dataviz skill): light stays
-// >= step 250 (2:1 floor), dark stays <= step 600, both requirements for an ordinal ramp.
-export const STATUS_ORDINAL = {
-  light: ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#123a6e', '#08203f'],
-  dark: ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95'],
-}
-
 export function categoricalColor(theme, index) {
   const set = CATEGORICAL[theme] || CATEGORICAL.dark
   return set[index % set.length]
 }
-
-export function statusOrdinalColor(theme, index) {
-  const set = STATUS_ORDINAL[theme] || STATUS_ORDINAL.dark
-  return set[Math.min(index, set.length - 1)]
-}
-
-export const STATUS_ORDER = ['Not Taken', 'Not Started', 'In Progress', 'On Hold', 'QA', 'Completed']
 
 export const RANGE_OPTIONS = [
   { key: 'week', label: 'Week' },
