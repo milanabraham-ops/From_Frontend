@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { roleHome } from '../../lib/roles'
 import GoogleSignInButton from './GoogleSignInButton'
@@ -90,10 +90,6 @@ export default function LoginPage() {
         <div className="auth-divider"><span>or</span></div>
 
         <GoogleSignInButton onCredential={handleGoogleCredential} />
-
-        <div className="auth-switch">
-          Don&apos;t have an account? <Link to="/signup">Create one</Link>
-        </div>
       </div>
     </div>
   )

@@ -5,7 +5,6 @@ import { ToastProvider } from './context/ToastContext'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import RequireRole from './components/auth/RequireRole'
 import LoginPage from './components/auth/LoginPage'
-import SignupPage from './components/auth/SignupPage'
 import ChangePasswordPage from './components/auth/ChangePasswordPage'
 import Dashboard from './components/dashboard/Dashboard'
 import StatsOverview from './components/dashboard/StatsOverview'
@@ -25,7 +24,6 @@ function App() {
           <ToastProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
               <Route
                 path="/dashboard"

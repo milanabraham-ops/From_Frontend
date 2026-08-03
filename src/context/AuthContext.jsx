@@ -73,15 +73,6 @@ export function AuthProvider({ children }) {
     return body.user
   }
 
-  const register = (name, email, password) =>
-    handleAuthResponse(
-      fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      }),
-    )
-
   const login = (email, password) =>
     handleAuthResponse(
       fetch(`${API_URL}/auth/login`, {
@@ -138,7 +129,6 @@ export function AuthProvider({ children }) {
         user: auth?.user || null,
         token: auth?.token || null,
         loading,
-        register,
         login,
         loginWithGoogle,
         logout,
