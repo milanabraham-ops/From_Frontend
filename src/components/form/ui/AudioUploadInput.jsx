@@ -1,6 +1,8 @@
 import { useFileUpload } from '../../../hooks/useFileUpload'
+import { useAuth } from '../../../context/AuthContext'
 
 export default function AudioUploadInput({ apiUrl, value, onChange, label = 'Upload audio file', practiceName, locationName, disabled = false }) {
+  const { token } = useAuth()
   const { upload, remove, uploading, error } = useFileUpload(apiUrl)
 
   const handleFile = async (e) => {
@@ -9,14 +11,20 @@ export default function AudioUploadInput({ apiUrl, value, onChange, label = 'Upl
     if (!file) return
     try {
       const uploaded = await upload(file, practiceName, locationName)
-      onChange({ fileId: uploaded.fileId, filename: uploaded.filename, driveUrl: uploaded.driveUrl || '' })
+      onChange({
+        fileId: uploaded.fileId || null,
+        driveFileId: uploaded.driveFileId || '',
+        filename: uploaded.filename,
+        driveUrl: uploaded.driveUrl || '',
+      })
     } catch {
       // error already surfaced via the hook's error state
     }
   }
 
   const handleRemove = () => {
-    if (value?.fileId) remove(value.fileId)
+    const removeId = value?.driveFileId || value?.fileId
+    if (removeId) remove(removeId)
     onChange(null)
   }
 
@@ -28,16 +36,16 @@ export default function AudioUploadInput({ apiUrl, value, onChange, label = 'Upl
           <i className="ti ti-upload"></i> {uploading ? 'Uploading…' : 'Choose audio file'}
           <input type="file" accept="audio/*" onChange={handleFile} disabled={uploading || disabled} style={{ display: 'none' }} />
         </label>
-        {value?.fileId ? (
+        {value?.filename ? (
           <>
-            <a className="upload-fname" href={`${apiUrl}/uploads/${value.fileId}`} target="_blank" rel="noreferrer">
+            <a
+              className="upload-fname"
+              href={value.driveUrl || `${apiUrl}/uploads/${value.fileId}?token=${encodeURIComponent(token || '')}`}
+              target="_blank"
+              rel="noreferrer"
+            >
               {value.filename}
             </a>
-            {value.driveUrl && (
-              <a className="upload-fname" href={value.driveUrl} target="_blank" rel="noreferrer">
-                <i className="ti ti-brand-google-drive"></i> View in Drive
-              </a>
-            )}
             {!disabled && (
               <button type="button" className="btn-sm danger" onClick={handleRemove}>
                 <i className="ti ti-trash"></i>

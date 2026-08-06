@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth, API_URL } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
@@ -26,7 +27,7 @@ export default function AdminSettings() {
     async function load() {
       setLoading(true)
       try {
-        const res = await fetch(`${API_URL}/admin/settings`, { headers: { Authorization: `Bearer ${token}` } })
+        const res = await apiFetch(`${API_URL}/admin/settings`)
         if (!res.ok) throw new Error('Failed to load settings')
         const body = await res.json()
         if (!cancelled) setForm((f) => ({ ...f, ...body }))
@@ -51,9 +52,9 @@ export default function AdminSettings() {
     setSaving(true)
     setError('')
     try {
-      const res = await fetch(`${API_URL}/admin/settings`, {
+      const res = await apiFetch(`${API_URL}/admin/settings`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
       const body = await res.json().catch(() => ({}))

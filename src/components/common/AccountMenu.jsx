@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth, API_URL } from '../../context/AuthContext'
+import { useAuth } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
+import { API_URL } from '../../lib/apiUrl'
 import Avatar from './Avatar'
 
 export default function AccountMenu() {
-  const { user, token, logout, updateAvatar } = useAuth()
+  const { user, logout, updateAvatar } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -38,9 +40,8 @@ export default function AccountMenu() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = await fetch(`${API_URL}/avatar`, {
+      const res = await apiFetch(`${API_URL}/avatar`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       })
       if (!res.ok) {

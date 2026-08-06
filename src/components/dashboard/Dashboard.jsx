@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth, API_URL } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
@@ -54,10 +55,7 @@ export default function Dashboard() {
     async function load(isBackgroundRefresh) {
       if (!isBackgroundRefresh) setLoading(true)
       try {
-        const [subsRes, groupsRes] = await Promise.all([
-          fetch(`${API_URL}/submissions`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_URL}/groups`, { headers: { Authorization: `Bearer ${token}` } }),
-        ])
+        const [subsRes, groupsRes] = await Promise.all([apiFetch(`${API_URL}/submissions`), apiFetch(`${API_URL}/groups`)])
         if (!subsRes.ok || !groupsRes.ok) throw new Error('Failed to load submissions')
         const subsBody = await subsRes.json()
         const groupsBody = await groupsRes.json()
@@ -97,10 +95,7 @@ export default function Dashboard() {
     setDeleting(true)
     setDeleteError('')
     try {
-      const res = await fetch(`${API_URL}/submissions/${pendingDelete._id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await apiFetch(`${API_URL}/submissions/${pendingDelete._id}`, { method: 'DELETE' })
       if (!res.ok && res.status !== 204) throw new Error('Failed to delete submission')
       setSubmissions((prev) => prev.filter((s) => s._id !== pendingDelete._id))
       showToast('Submission deleted.')
@@ -119,10 +114,7 @@ export default function Dashboard() {
     setDeletingGroup(true)
     setDeleteError('')
     try {
-      const res = await fetch(`${API_URL}/groups/${pendingDeleteGroup._id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await apiFetch(`${API_URL}/groups/${pendingDeleteGroup._id}`, { method: 'DELETE' })
       if (!res.ok && res.status !== 204) throw new Error('Failed to delete group')
       setGroups((prev) => prev.filter((g) => g._id !== pendingDeleteGroup._id))
       showToast('Group deleted.')

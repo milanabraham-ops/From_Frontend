@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth, API_URL } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
@@ -41,7 +42,7 @@ export default function AdminUsers() {
     async function load() {
       setLoading(true)
       try {
-        const res = await fetch(`${API_URL}/admin/users`, { headers: { Authorization: `Bearer ${token}` } })
+        const res = await apiFetch(`${API_URL}/admin/users`)
         if (!res.ok) throw new Error('Failed to load users')
         const body = await res.json()
         if (!cancelled) {
@@ -65,9 +66,9 @@ export default function AdminUsers() {
     setSavingId(targetUser.id)
     setError('')
     try {
-      const res = await fetch(`${API_URL}/admin/users/${targetUser.id}/role`, {
+      const res = await apiFetch(`${API_URL}/admin/users/${targetUser.id}/role`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),
       })
       const body = await res.json().catch(() => ({}))
@@ -87,10 +88,7 @@ export default function AdminUsers() {
     if (!pendingRemove) return
     setRemoving(true)
     try {
-      const res = await fetch(`${API_URL}/admin/users/${pendingRemove.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await apiFetch(`${API_URL}/admin/users/${pendingRemove.id}`, { method: 'DELETE' })
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error || 'Failed to remove access')
@@ -110,9 +108,9 @@ export default function AdminUsers() {
     setAdding(true)
     setAddError('')
     try {
-      const res = await fetch(`${API_URL}/admin/users`, {
+      const res = await apiFetch(`${API_URL}/admin/users`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
       const body = await res.json().catch(() => ({}))
@@ -133,10 +131,7 @@ export default function AdminUsers() {
   const confirmPurge = async () => {
     setPurging(true)
     try {
-      const res = await fetch(`${API_URL}/admin/purge-test-data`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await apiFetch(`${API_URL}/admin/purge-test-data`, { method: 'POST' })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || 'Failed to purge test data')
       showToast(

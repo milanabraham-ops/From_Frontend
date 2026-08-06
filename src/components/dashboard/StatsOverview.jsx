@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth, API_URL } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
@@ -36,7 +37,7 @@ export default function StatsOverview() {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch(`${API_URL}/stats?range=${range}`, { headers: { Authorization: `Bearer ${token}` } })
+        const res = await apiFetch(`${API_URL}/stats?range=${range}`)
         if (!res.ok) throw new Error('Failed to load stats')
         const body = await res.json()
         if (!cancelled) setData(body)

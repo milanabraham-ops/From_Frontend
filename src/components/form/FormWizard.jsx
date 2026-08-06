@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import './form.css'
 import { initialFormData, TOTAL_STEPS } from '../../data/options'
 import { useAuth, API_URL } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
@@ -48,9 +49,7 @@ export default function FormWizard({ mode = 'create' }) {
         setLoadingExisting(true)
         setLoadError('')
         try {
-          const res = await fetch(`${API_URL}/submissions/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
+          const res = await apiFetch(`${API_URL}/submissions/${id}`)
           if (!res.ok) throw new Error('Could not load this submission')
           const body = await res.json()
           if (!cancelled) setData((prev) => ({ ...prev, ...body }))
@@ -72,14 +71,14 @@ export default function FormWizard({ mode = 'create' }) {
         setLoadingExisting(true)
         setLoadError('')
         try {
-          const groupRes = await fetch(`${API_URL}/groups/${groupId}`, { headers: { Authorization: `Bearer ${token}` } })
+          const groupRes = await apiFetch(`${API_URL}/groups/${groupId}`)
           if (!groupRes.ok) throw new Error('Could not load this group')
           const group = await groupRes.json()
           if (!cancelled) setGroupInfo(group)
 
           let patch = { clientName: group.clientName }
           if (cloneFromId) {
-            const cloneRes = await fetch(`${API_URL}/submissions/${cloneFromId}`, { headers: { Authorization: `Bearer ${token}` } })
+            const cloneRes = await apiFetch(`${API_URL}/submissions/${cloneFromId}`)
             if (cloneRes.ok) {
               const src = await cloneRes.json()
               const {
@@ -149,9 +148,9 @@ export default function FormWizard({ mode = 'create' }) {
     try {
       const url = isEditMode ? `${API_URL}/submissions/${id}` : `${API_URL}/submissions`
       const payload = !isEditMode && groupId ? { ...data, group: groupId } : data
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: isEditMode ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       if (!res.ok) {

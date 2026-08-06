@@ -74,6 +74,18 @@
   transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
 }
 .auth-field input::placeholder { color: rgba(255, 255, 255, 0.38); }
+.auth-field .hint { font-size: 11.5px; color: rgba(255, 255, 255, 0.45); margin-top: 6px; line-height: 1.4; }
+
+.auth-password-wrap { position: relative; }
+.auth-password-wrap input { padding-right: 44px; }
+.auth-password-toggle {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer;
+  color: rgba(255, 255, 255, 0.45); font-size: 17px;
+  transition: color 0.15s;
+}
+.auth-password-toggle:hover { color: rgba(255, 255, 255, 0.85); }
 .auth-field input:focus {
   border-color: rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.1);

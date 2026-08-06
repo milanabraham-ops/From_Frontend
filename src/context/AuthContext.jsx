@@ -1,66 +1,81 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { API_URL } from '../lib/apiUrl'
+import {
+  apiFetch,
+  csrfHeaders,
+  getAccessToken,
+  refreshAccessToken,
+  setAccessToken,
+  setOnRefreshed,
+  setOnSessionExpired,
+} from '../lib/apiFetch'
+
+export { API_URL }
 
 const AuthContext = createContext(null)
-const STORAGE_KEY = 'voicestack.auth'
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-function readStoredAuth() {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
+// How long before the access token's own 15-minute expiry to proactively renew it — leaves
+// margin so a slow request or a backgrounded tab waking back up doesn't land in the gap right as
+// the old token expires. Reactive refresh-on-401 (in apiFetch) is the backstop if this timer is
+// ever late.
+const PROACTIVE_REFRESH_MS = 12 * 60 * 1000
 
 export function AuthProvider({ children }) {
-  const [auth, setAuth] = useState(readStoredAuth)
+  const [user, setUser] = useState(null)
+  const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
+  const refreshTimerRef = useRef(null)
 
+  const clearRefreshTimer = () => {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current)
+      refreshTimerRef.current = null
+    }
+  }
+
+  const scheduleProactiveRefresh = () => {
+    clearRefreshTimer()
+    refreshTimerRef.current = setTimeout(() => {
+      refreshAccessToken()
+    }, PROACTIVE_REFRESH_MS)
+  }
+
+  // These two fire regardless of what triggered the refresh — AuthContext's own proactive timer,
+  // or apiFetch reactively retrying some unrelated component's 401 — so this is the one place
+  // React state (token/user) gets kept in sync with whichever path actually ran.
   useEffect(() => {
+    setOnRefreshed((body) => {
+      setToken(body.token)
+      setUser(body.user)
+      scheduleProactiveRefresh()
+    })
+    setOnSessionExpired(() => {
+      clearRefreshTimer()
+      setToken(null)
+      setUser(null)
+    })
+
     let cancelled = false
     async function restore() {
-      const stored = readStoredAuth()
-      if (!stored?.token) {
-        setLoading(false)
-        return
+      // No token is held anywhere in storage across a reload by design — this silent refresh is
+      // what re-establishes a session using the HttpOnly refresh cookie the browser still has.
+      const result = await refreshAccessToken()
+      if (cancelled) return
+      if (result) {
+        setToken(result.token)
+        setUser(result.user)
+        scheduleProactiveRefresh()
       }
-      let res
-      try {
-        res = await fetch(`${API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${stored.token}` },
-        })
-      } catch {
-        // Network/backend unreachable — this doesn't mean the session is invalid, just that we
-        // couldn't check. Leave the cached auth as-is (already the initial state) rather than
-        // logging the user out over a backend/DB blip.
-        if (!cancelled) setLoading(false)
-        return
-      }
-      try {
-        if (!res.ok) throw new Error('Session expired')
-        const body = await res.json()
-        if (!cancelled) setAuth({ token: stored.token, user: body.user })
-      } catch {
-        if (!cancelled) {
-          setAuth(null)
-          sessionStorage.removeItem(STORAGE_KEY)
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+      setLoading(false)
     }
     restore()
+
     return () => {
       cancelled = true
+      clearRefreshTimer()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const persist = (value) => {
-    setAuth(value)
-    if (value) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value))
-    else sessionStorage.removeItem(STORAGE_KEY)
-  }
 
   const handleAuthResponse = async (resPromise) => {
     const res = await resPromise
@@ -69,7 +84,10 @@ export function AuthProvider({ children }) {
       throw new Error(body.error || 'Authentication failed')
     }
     const body = await res.json()
-    persist({ token: body.token, user: body.user })
+    setAccessToken(body.token)
+    setToken(body.token)
+    setUser(body.user)
+    scheduleProactiveRefresh()
     return body.user
   }
 
@@ -77,6 +95,7 @@ export function AuthProvider({ children }) {
     handleAuthResponse(
       fetch(`${API_URL}/auth/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       }),
@@ -86,32 +105,44 @@ export function AuthProvider({ children }) {
     handleAuthResponse(
       fetch(`${API_URL}/auth/google`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credential }),
       }),
     )
 
-  const logout = () => persist(null)
-
-  const changePassword = async (currentPassword, newPassword) => {
-    const res = await fetch(`${API_URL}/auth/change-password`, {
+  // Clears local session state synchronously, before firing the server-side invalidation call —
+  // callers immediately navigate away after calling this (see AccountMenu), so user/token need to
+  // already be cleared by the time that navigation renders the next page, not after some await.
+  // The actual refresh-token invalidation on the server happens in the background either way.
+  const logout = () => {
+    clearRefreshTimer()
+    setAccessToken(null)
+    setToken(null)
+    setUser(null)
+    fetch(`${API_URL}/auth/logout`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth?.token}` },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.error || 'Could not change password')
-    }
-    const body = await res.json()
-    persist({ token: auth?.token, user: body.user })
-    return body.user
+      credentials: 'include',
+      headers: csrfHeaders(),
+    }).catch(() => {})
   }
 
+  // The refresh token rotates on every use, including here — changing your password is treated
+  // the same as logging in fresh, ending every other session on the account.
+  const changePassword = (currentPassword, newPassword) =>
+    handleAuthResponse(
+      fetch(`${API_URL}/auth/change-password`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAccessToken()}` },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
+    )
+
   const updateAvatar = async (avatarUrl) => {
-    const res = await fetch(`${API_URL}/auth/me`, {
+    const res = await apiFetch(`${API_URL}/auth/me`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth?.token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ avatarUrl }),
     })
     if (!res.ok) {
@@ -119,15 +150,15 @@ export function AuthProvider({ children }) {
       throw new Error(body.error || 'Could not update profile picture')
     }
     const body = await res.json()
-    persist({ token: auth?.token, user: body.user })
+    setUser(body.user)
     return body.user
   }
 
   return (
     <AuthContext.Provider
       value={{
-        user: auth?.user || null,
-        token: auth?.token || null,
+        user,
+        token,
         loading,
         login,
         loginWithGoogle,

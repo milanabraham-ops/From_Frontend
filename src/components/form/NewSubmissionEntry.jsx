@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './form.css'
-import { useAuth, API_URL } from '../../context/AuthContext'
+import { API_URL } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
@@ -16,7 +17,6 @@ export default function NewSubmissionEntry() {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
-  const { token } = useAuth()
   const { theme } = useTheme()
   const { showToast } = useToast()
   const scrollRef = useRef(null)
@@ -30,9 +30,9 @@ export default function NewSubmissionEntry() {
     setCreating(true)
     setError('')
     try {
-      const res = await fetch(`${API_URL}/groups`, {
+      const res = await apiFetch(`${API_URL}/groups`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientName: trimmed,
           expectedLocationCount: expectedLocationCount.trim() === '' ? null : Number(expectedLocationCount),

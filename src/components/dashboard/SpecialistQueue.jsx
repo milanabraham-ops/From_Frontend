@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth, API_URL } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
@@ -59,7 +60,7 @@ export default function SpecialistQueue() {
     async function load(isBackgroundRefresh) {
       if (!isBackgroundRefresh) setLoading(true)
       try {
-        const res = await fetch(`${API_URL}/submissions`, { headers: { Authorization: `Bearer ${token}` } })
+        const res = await apiFetch(`${API_URL}/submissions`)
         if (!res.ok) throw new Error('Failed to load submissions')
         const body = await res.json()
         if (!cancelled) {
@@ -86,9 +87,9 @@ export default function SpecialistQueue() {
     setSavingId(submission._id)
     setError('')
     try {
-      const res = await fetch(`${API_URL}/submissions/${submission._id}`, {
+      const res = await apiFetch(`${API_URL}/submissions/${submission._id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       })
       if (!res.ok) throw new Error('Failed to save change')

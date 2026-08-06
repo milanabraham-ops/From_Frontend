@@ -3,8 +3,20 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { roleHome } from '../../lib/roles'
 import Blobs from '../common/Blobs'
+import PasswordField from './PasswordField'
 import logoDark from '../../assets/voicestack-logo-dark.svg'
 import './auth.css'
+
+// Mirrors Backend/src/utils/passwordPolicy.js — kept in sync manually since the two apps don't
+// share code. Client-side check is just for instant feedback; the server enforces this too.
+function passwordPolicyError(password) {
+  if (!password || password.length < 8) return 'New password must be at least 8 characters'
+  if (!/[a-z]/.test(password)) return 'New password must include a lowercase letter'
+  if (!/[A-Z]/.test(password)) return 'New password must include an uppercase letter'
+  if (!/[0-9]/.test(password)) return 'New password must include a number'
+  if (!/[^a-zA-Z0-9]/.test(password)) return 'New password must include a special character'
+  return null
+}
 
 // Forced gate — reached only when user.mustChangePassword is true (see ProtectedRoute/RequireRole).
 // Once changed, the account behaves like any other and this page is unreachable again.
@@ -23,12 +35,17 @@ export default function ChangePasswordPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters')
+    const policyError = passwordPolicyError(newPassword)
+    if (policyError) {
+      setError(policyError)
       return
     }
     if (newPassword !== confirmPassword) {
       setError('New passwords do not match')
+      return
+    }
+    if (newPassword === currentPassword) {
+      setError('New password must be different from your current password')
       return
     }
     setSubmitting(true)
@@ -62,34 +79,16 @@ export default function ChangePasswordPage() {
         <form onSubmit={handleSubmit}>
           <div className="auth-field">
             <label>Current Password</label>
-            <input
-              type="password"
-              value={currentPassword}
-              required
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="••••••••"
-            />
+            <PasswordField value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
           </div>
           <div className="auth-field">
             <label>New Password</label>
-            <input
-              type="password"
-              value={newPassword}
-              required
-              minLength={8}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="At least 8 characters"
-            />
+            <PasswordField value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8} />
+            <div className="hint">At least 8 characters, with uppercase, lowercase, a number, and a special character.</div>
           </div>
           <div className="auth-field">
             <label>Confirm New Password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              required
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-            />
+            <PasswordField value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
           </div>
           <button type="submit" className="auth-btn-primary" disabled={submitting}>
             {submitting ? 'Saving…' : 'Change Password'}

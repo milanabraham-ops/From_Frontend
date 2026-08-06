@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import './form.css'
 import { useAuth, API_URL } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
 import Sidebar from '../common/Sidebar'
@@ -45,7 +46,7 @@ export default function GroupDetail() {
     if (!isBackgroundRefresh) setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API_URL}/groups/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+      const res = await apiFetch(`${API_URL}/groups/${id}`)
       if (!res.ok) throw new Error('Could not load this group')
       const body = await res.json()
       setGroup(body)
@@ -77,9 +78,9 @@ export default function GroupDetail() {
       return
     }
     try {
-      const res = await fetch(`${API_URL}/groups/${id}`, {
+      const res = await apiFetch(`${API_URL}/groups/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientName: trimmed }),
       })
       if (!res.ok) throw new Error('Could not rename group')
@@ -108,9 +109,9 @@ export default function GroupDetail() {
       return
     }
     try {
-      const res = await fetch(`${API_URL}/groups/${id}`, {
+      const res = await apiFetch(`${API_URL}/groups/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ expectedLocationCount: value }),
       })
       const updated = await res.json().catch(() => ({}))
@@ -131,10 +132,7 @@ export default function GroupDetail() {
     setDeletingLocation(true)
     setActionError('')
     try {
-      const res = await fetch(`${API_URL}/submissions/${pendingDeleteLocation._id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await apiFetch(`${API_URL}/submissions/${pendingDeleteLocation._id}`, { method: 'DELETE' })
       if (!res.ok && res.status !== 204) throw new Error('Failed to delete location')
       setGroup((prev) => ({ ...prev, locations: prev.locations.filter((l) => l._id !== pendingDeleteLocation._id) }))
       showToast('Location deleted.')
@@ -152,7 +150,7 @@ export default function GroupDetail() {
     setDeletingGroup(true)
     setActionError('')
     try {
-      const res = await fetch(`${API_URL}/groups/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      const res = await apiFetch(`${API_URL}/groups/${id}`, { method: 'DELETE' })
       if (!res.ok && res.status !== 204) throw new Error('Failed to delete group')
       showToast('Group deleted.')
       navigate('/')

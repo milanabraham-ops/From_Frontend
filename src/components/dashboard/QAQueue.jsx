@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth, API_URL } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
@@ -60,7 +61,7 @@ export default function QAQueue() {
     async function load(isBackgroundRefresh) {
       if (!isBackgroundRefresh) setLoading(true)
       try {
-        const res = await fetch(`${API_URL}/submissions`, { headers: { Authorization: `Bearer ${token}` } })
+        const res = await apiFetch(`${API_URL}/submissions`)
         if (!res.ok) throw new Error('Failed to load submissions')
         const body = await res.json()
         if (!cancelled) {
@@ -86,7 +87,7 @@ export default function QAQueue() {
   // fetch would go stale for anyone who already had this page open when a teammate added an
   // item, so this re-fetches on load AND every time a review is opened, not just once.
   const loadTemplateItems = () => {
-    fetch(`${API_URL}/qa-checklist-items`, { headers: { Authorization: `Bearer ${token}` } })
+    apiFetch(`${API_URL}/qa-checklist-items`)
       .then((res) => (res.ok ? res.json() : { items: [] }))
       .then((body) => setTemplateItems(Array.isArray(body.items) ? body.items : []))
       .catch(() => {})
@@ -103,9 +104,9 @@ export default function QAQueue() {
   }
 
   const addChecklistTemplateItem = async (name) => {
-    const res = await fetch(`${API_URL}/qa-checklist-items`, {
+    const res = await apiFetch(`${API_URL}/qa-checklist-items`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item: name }),
     })
     const body = await res.json().catch(() => ({}))
@@ -127,9 +128,9 @@ export default function QAQueue() {
     setSavingId(submission._id)
     setError('')
     try {
-      const res = await fetch(`${API_URL}/submissions/${submission._id}`, {
+      const res = await apiFetch(`${API_URL}/submissions/${submission._id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       })
       if (!res.ok) throw new Error('Failed to save change')
@@ -214,9 +215,9 @@ export default function QAQueue() {
     if (!handoverTarget) return
     setSendingHandover(true)
     try {
-      const res = await fetch(`${API_URL}/submissions/${handoverTarget._id}/handover`, {
+      const res = await apiFetch(`${API_URL}/submissions/${handoverTarget._id}/handover`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: handoverMessage }),
       })
       const body = await res.json().catch(() => ({}))

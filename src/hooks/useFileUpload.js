@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 export function useFileUpload(apiUrl) {
-  const { token } = useAuth()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
 
@@ -14,9 +13,8 @@ export function useFileUpload(apiUrl) {
       formData.append('file', file)
       if (practiceName) formData.append('practiceName', practiceName)
       if (locationName) formData.append('locationName', locationName)
-      const res = await fetch(`${apiUrl}/uploads`, {
+      const res = await apiFetch(`${apiUrl}/uploads`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       })
       if (!res.ok) {
@@ -34,10 +32,7 @@ export function useFileUpload(apiUrl) {
 
   const remove = async (fileId) => {
     try {
-      await fetch(`${apiUrl}/uploads/${fileId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      await apiFetch(`${apiUrl}/uploads/${fileId}`, { method: 'DELETE' })
     } catch {
       // best-effort cleanup, ignore failures
     }

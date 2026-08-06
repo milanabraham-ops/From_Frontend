@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { roleHome } from '../../lib/roles'
 import GoogleSignInButton from './GoogleSignInButton'
+import PasswordField from './PasswordField'
 import Blobs from '../common/Blobs'
 import logoDark from '../../assets/voicestack-logo-dark.svg'
 import './auth.css'
@@ -74,13 +75,7 @@ export default function LoginPage() {
           </div>
           <div className="auth-field">
             <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              required
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
+            <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <button type="submit" className="auth-btn-primary" disabled={submitting}>
             {submitting ? 'Signing in…' : 'Sign In'}
