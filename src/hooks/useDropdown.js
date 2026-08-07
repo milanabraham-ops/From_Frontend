@@ -14,23 +14,34 @@ export function useDropdown() {
 
   useLayoutEffect(() => {
     if (!open || !anchorRef.current) return
-    const rect = anchorRef.current.getBoundingClientRect()
-    const width = Math.max(rect.width, 160)
-    const margin = 8
-    // The forced 160px minimum can be wider than a narrow table cell's own trigger — without
-    // clamping, that extra width (or a trigger sitting near the edge of the viewport/scroll
-    // wrapper) pushes the menu past the viewport edge, where it visually bleeds into whatever's
-    // next to it instead of sitting cleanly under the field.
-    let left = rect.left
-    if (left + width > window.innerWidth - margin) left = Math.max(margin, window.innerWidth - margin - width)
 
-    const style = { position: 'fixed', left, minWidth: width }
-    // Same idea vertically: if there isn't reasonable room below the trigger (and there's more
-    // room above), open upward from the trigger's top instead of downward off the bottom edge.
-    const spaceBelow = window.innerHeight - rect.bottom
-    if (spaceBelow < 160 && rect.top > spaceBelow) style.bottom = window.innerHeight - rect.top + 4
-    else style.top = rect.bottom + 4
-    setStyle(style)
+    const measure = () => {
+      const rect = anchorRef.current.getBoundingClientRect()
+      const width = Math.max(rect.width, 160)
+      const margin = 8
+      // The forced 160px minimum can be wider than a narrow table cell's own trigger — without
+      // clamping, that extra width (or a trigger sitting near the edge of the viewport/scroll
+      // wrapper) pushes the menu past the viewport edge, where it visually bleeds into whatever's
+      // next to it instead of sitting cleanly under the field.
+      let left = rect.left
+      if (left + width > window.innerWidth - margin) left = Math.max(margin, window.innerWidth - margin - width)
+
+      const next = { position: 'fixed', left, minWidth: width }
+      // Same idea vertically: if there isn't reasonable room below the trigger (and there's more
+      // room above), open upward from the trigger's top instead of downward off the bottom edge.
+      const spaceBelow = window.innerHeight - rect.bottom
+      if (spaceBelow < 160 && rect.top > spaceBelow) next.bottom = window.innerHeight - rect.top + 4
+      else next.top = rect.bottom + 4
+      setStyle(next)
+    }
+
+    measure()
+    // A field opened for the first time on a freshly-loaded page can still have layout settling
+    // underneath it right after this runs (an icon font swapping in, the browser auto-scrolling a
+    // just-focused field into view) — this one's measured before that happens, so it lands off.
+    // Re-measuring a frame later catches that without affecting the (already-correct) second open.
+    const raf = requestAnimationFrame(measure)
+    return () => cancelAnimationFrame(raf)
   }, [open])
 
   useEffect(() => {
