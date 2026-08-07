@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { REVIEW_SECTIONS, RING_GROUP_FIELDS } from '../reviewSections'
+import ReviewFieldValue from '../ReviewFieldValue'
 
 function ReviewSection({ section, goToStep }) {
   return (
@@ -16,7 +17,9 @@ function ReviewSection({ section, goToStep }) {
           return (
             <div className="review-row" key={f.label}>
               <span className="review-label">{f.label}</span>
-              <span className={`review-value${value ? '' : ' empty'}`}>{value || 'Not provided'}</span>
+              <span className={`review-value${value ? '' : ' empty'}`}>
+                <ReviewFieldValue value={value} />
+              </span>
             </div>
           )
         })}
@@ -73,7 +76,9 @@ export default function Step9Review({ data, update, goToStep, isEditMode }) {
               return (
                 <div className="review-row" key={f.label}>
                   <span className="review-label">{f.label}</span>
-                  <span className={`review-value${value ? '' : ' empty'}`}>{value || 'Not provided'}</span>
+                  <span className={`review-value${value ? '' : ' empty'}`}>
+                    <ReviewFieldValue value={value} />
+                  </span>
                 </div>
               )
             })}

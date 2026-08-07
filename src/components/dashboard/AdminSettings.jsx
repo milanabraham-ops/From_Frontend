@@ -11,6 +11,7 @@ import '../form/form.css'
 const BLANK = {
   gchatQaWebhookUrl: '',
   gchatPocWebhookUrl: '',
+  googleDriveFolderId: '',
 }
 
 export default function AdminSettings() {
@@ -90,8 +91,8 @@ export default function AdminSettings() {
           <TopUserBar />
           <div className="dash-main-header">
             <div>
-              <h1>Notification Settings</h1>
-              <p>Google Chat notifications. Changes apply immediately, no restart needed.</p>
+              <h1>Settings</h1>
+              <p>Google Chat notifications and Drive storage. Changes apply immediately, no restart needed.</p>
             </div>
           </div>
 
@@ -129,6 +130,27 @@ export default function AdminSettings() {
                   placeholder="https://chat.googleapis.com/v1/spaces/..."
                   value={form.gchatPocWebhookUrl}
                   onChange={(e) => update('gchatPocWebhookUrl', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="settings-panel">
+              <div className="settings-panel-header">
+                <h2>Google Drive</h2>
+                <p>
+                  The Shared Drive uploaded audio and profile photos are stored in. Find its id in the Drive URL
+                  (drive.google.com/drive/folders/<strong>this-part</strong>), after sharing it with the service account
+                  (Editor access). Changing this takes effect on the very next upload, no restart needed.
+                </p>
+              </div>
+              <div className="field tight">
+                <label>Drive folder (Shared Drive) id</label>
+                <input
+                  type="text"
+                  className="inline-edit-input"
+                  placeholder="e.g. 0AO8px7bKarwcUk9PVA"
+                  value={form.googleDriveFolderId}
+                  onChange={(e) => update('googleDriveFolderId', e.target.value)}
                 />
               </div>
             </div>

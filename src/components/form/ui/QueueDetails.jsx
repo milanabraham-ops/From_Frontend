@@ -1,5 +1,6 @@
 import CheckboxGroup from './CheckboxGroup'
 import AudioSourceInput from './AudioSourceInput'
+import SelectInput from '../../common/SelectInput'
 import { QUEUE_ANNOUNCEMENTS, QUEUE_EXIT_TYPES } from '../../../data/options'
 
 export default function QueueDetails({ detail, apiUrl, practiceName, locationName, updateDetail, disabled = false }) {
@@ -39,12 +40,12 @@ export default function QueueDetails({ detail, apiUrl, practiceName, locationNam
       <div className="g2">
         <div className="field">
           <label>Queue Exit Type</label>
-          <select value={detail.exitType} disabled={disabled} onChange={(e) => updateDetail('exitType', e.target.value)}>
-            <option value="">Select…</option>
-            {QUEUE_EXIT_TYPES.map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
+          <SelectInput
+            value={detail.exitType}
+            onChange={(v) => updateDetail('exitType', v)}
+            options={QUEUE_EXIT_TYPES}
+            disabled={disabled}
+          />
         </div>
         <div className="field">
           <label>Key to Activate Exit</label>

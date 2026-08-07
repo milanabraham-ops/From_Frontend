@@ -6,20 +6,26 @@ function list(value) {
   return Array.isArray(value) && value.length ? value.join(', ') : ''
 }
 
+// This file stays plain JS (no JSX) since it's a .js module, not .jsx — when there's an actual
+// uploaded file, the summary becomes { text, file } instead of a plain string, and it's up to
+// whichever component renders it (see ReviewFieldValue.jsx, shared by every consumer) to turn
+// that into a real clickable link. Without this, a submitted audio file is only ever reachable
+// by re-opening the whole form in edit mode — reviewers couldn't actually listen to what a POC
+// uploaded from the screens they actually use to review it.
 function audioToggleSummary(type, script, file) {
   if (!type) return ''
   if (type !== 'Custom') return 'Default'
   const parts = []
   if (script) parts.push('Script/link provided')
-  if (file?.filename) parts.push(`File: ${file.filename}`)
+  if (file?.filename) return { text: parts.join(' · '), file }
   return parts.length ? parts.join(' · ') : 'Custom selected, but no script/link/file added yet'
 }
 
 function rawAudioSummary(script, file) {
   const parts = []
   if (script) parts.push('Script/link provided')
-  if (file?.filename) parts.push(`File: ${file.filename}`)
-  return parts.length ? parts.join(' · ') : ''
+  if (file?.filename) return { text: parts.join(' · '), file }
+  return parts.join(' · ')
 }
 
 function activeQueueDetail(group) {
@@ -108,6 +114,7 @@ export const REVIEW_SECTIONS = [
     fields: [
       { label: 'Business Hours Phone Tree', get: (d) => d.phoneTree },
       { label: 'Call Flow Detail', get: (d) => d.callFlow },
+      { label: 'After-Hours Phone Tree', get: (d) => d.afterHoursPhoneTree },
       { label: 'After-Hours Condition', get: (d) => d.afterHoursCondition },
     ],
   },

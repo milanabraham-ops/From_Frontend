@@ -4,10 +4,12 @@ import { useAuth, API_URL } from '../../context/AuthContext'
 import { apiFetch } from '../../lib/apiFetch'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
+import { useNotifications } from '../../context/NotificationContext'
 import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import ConfirmDialog from '../common/ConfirmDialog'
 import CustomScrollbar from '../common/CustomScrollbar'
+import SubmissionDetailModal from './SubmissionDetailModal'
 import '../form/form.css'
 
 function formatDate(value) {
@@ -35,6 +37,7 @@ export default function Dashboard() {
   const { token } = useAuth()
   const { showToast } = useToast()
   const { theme } = useTheme()
+  const { unseenIds, markSeen } = useNotifications()
   const navigate = useNavigate()
   const [submissions, setSubmissions] = useState([])
   const [groups, setGroups] = useState([])
@@ -48,6 +51,7 @@ export default function Dashboard() {
   const [pendingDeleteGroup, setPendingDeleteGroup] = useState(null)
   const [deletingGroup, setDeletingGroup] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [viewing, setViewing] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -277,6 +281,11 @@ export default function Dashboard() {
                     r.kind === 'group' ? (
                       <tr key={r._id}>
                         <td>
+                          {unseenIds.pocHandover.has(r._id) && (
+                            <span className="row-badges">
+                              <span className="dash-nav-badge" title="New handover" />
+                            </span>
+                          )}
                           {r.clientName || 'Untitled'}
                           {r.isTestData && <span className="you-badge">test</span>}
                         </td>
@@ -296,7 +305,14 @@ export default function Dashboard() {
                         <td>{r.qaAgents?.length ? r.qaAgents.join(', ') : '—'}</td>
                         <td>{r.accountOnboarded ? <span className="status-badge">{r.accountOnboarded}</span> : '—'}</td>
                         <td className="dash-table-actions">
-                          <button type="button" className="btn-sm" onClick={() => navigate(`/groups/${r._id}`)}>
+                          <button
+                            type="button"
+                            className="btn-sm"
+                            onClick={() => {
+                              markSeen('pocHandover', r._id)
+                              navigate(`/groups/${r._id}`)
+                            }}
+                          >
                             <i className="ti ti-list-details"></i> View Locations
                           </button>
                           <button type="button" className="btn-sm danger" onClick={() => setPendingDeleteGroup(r)}>
@@ -307,6 +323,12 @@ export default function Dashboard() {
                     ) : (
                       <tr key={r._id}>
                         <td>
+                          {(unseenIds.pocHandover.has(r._id) || unseenIds.comment.has(r._id)) && (
+                            <span className="row-badges">
+                              {unseenIds.pocHandover.has(r._id) && <span className="dash-nav-badge" title="New handover" />}
+                              {unseenIds.comment.has(r._id) && <span className="dash-nav-badge comment" title="New comment" />}
+                            </span>
+                          )}
                           {r.clientName || 'Untitled'}
                           {r.isTestData && <span className="you-badge">test</span>}
                         </td>
@@ -319,9 +341,20 @@ export default function Dashboard() {
                         <td>{r.qaAgent || '—'}</td>
                         <td>{r.accountOnboarded ? <span className="status-badge">{r.accountOnboarded}</span> : '—'}</td>
                         <td className="dash-table-actions">
-                          <Link to={`/submissions/${r._id}`} className="btn-sm">
+                          <Link to={`/submissions/${r._id}`} className="btn-sm" onClick={() => markSeen('pocHandover', r._id)}>
                             <i className="ti ti-pencil"></i> Edit
                           </Link>
+                          <button
+                            type="button"
+                            className="btn-sm"
+                            onClick={() => {
+                              setViewing(r)
+                              markSeen('pocHandover', r._id)
+                              markSeen('comment', r._id)
+                            }}
+                          >
+                            <i className="ti ti-message-circle"></i> Comments
+                          </button>
                           <button
                             type="button"
                             className="btn-sm danger"
@@ -343,6 +376,15 @@ export default function Dashboard() {
         </div>
       </CustomScrollbar>
       </main>
+
+      <SubmissionDetailModal
+        submission={viewing}
+        onClose={() => setViewing(null)}
+        onCommentPosted={(updated) => {
+          setViewing(updated)
+          setSubmissions((prev) => prev.map((s) => (s._id === updated._id ? updated : s)))
+        }}
+      />
 
       <ConfirmDialog
         open={!!pendingDelete}

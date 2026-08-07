@@ -33,6 +33,15 @@ export default function Step3CallFlow({ data, update }) {
         default voicemail covering all agents, unless a custom condition is specified below.
       </div>
       <div className="field">
+        <label>After-Hours Phone Tree</label>
+        <RadioGroup
+          name="afterHoursTree"
+          options={PHONE_TREE_OPTIONS}
+          value={data.afterHoursPhoneTree}
+          onChange={(v) => update('afterHoursPhoneTree', v)}
+        />
+      </div>
+      <div className="field">
         <label>After-Hours Condition (optional)</label>
         <textarea
           value={data.afterHoursCondition}

@@ -1,3 +1,4 @@
+import SelectInput from '../../common/SelectInput'
 import { CARD_ASSIGNMENT_OPTIONS } from '../../../data/options'
 
 export default function Step6Devices({ data, update }) {
@@ -60,12 +61,7 @@ export default function Step6Devices({ data, update }) {
         <label>
           Card Assignment Rules <span className="req">*</span>
         </label>
-        <select value={data.cardAssignment} onChange={(e) => update('cardAssignment', e.target.value)}>
-          <option value="">Select…</option>
-          {CARD_ASSIGNMENT_OPTIONS.map((o) => (
-            <option key={o}>{o}</option>
-          ))}
-        </select>
+        <SelectInput value={data.cardAssignment} onChange={(v) => update('cardAssignment', v)} options={CARD_ASSIGNMENT_OPTIONS} />
       </div>
       <div className="field">
         <label>

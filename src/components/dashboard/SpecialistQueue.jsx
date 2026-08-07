@@ -8,7 +8,10 @@ import CustomScrollbar from '../common/CustomScrollbar'
 import SubmissionDetailModal from './SubmissionDetailModal'
 import MessageComposeModal from '../common/MessageComposeModal'
 import { useToast } from '../../context/ToastContext'
+import { useNotifications } from '../../context/NotificationContext'
 import { isMine } from '../../lib/isMine'
+import { reassignOptions } from '../../lib/reassignOptions'
+import SelectInput from '../common/SelectInput'
 import '../form/form.css'
 
 // Every state a specialist can set directly from the dropdown. Picking "QA" here is the
@@ -43,6 +46,7 @@ export default function SpecialistQueue() {
   const { token, user } = useAuth()
   const { theme } = useTheme()
   const { showToast } = useToast()
+  const { unseenIds, markSeen } = useNotifications()
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -53,6 +57,10 @@ export default function SpecialistQueue() {
   const [handoffTarget, setHandoffTarget] = useState(null)
   const [handoffMessage, setHandoffMessage] = useState('')
   const [sendingHandoff, setSendingHandoff] = useState(false)
+  // Everyone assignable to QA/configuration work (qa, specialist, admin) — for the reassign
+  // dropdown. Refetched on the same poll as submissions, so a newly added agent shows up here
+  // without needing a reload.
+  const [agentNames, setAgentNames] = useState([])
 
   useEffect(() => {
     let cancelled = false
@@ -60,11 +68,13 @@ export default function SpecialistQueue() {
     async function load(isBackgroundRefresh) {
       if (!isBackgroundRefresh) setLoading(true)
       try {
-        const res = await apiFetch(`${API_URL}/submissions`)
-        if (!res.ok) throw new Error('Failed to load submissions')
-        const body = await res.json()
+        const [subsRes, agentsRes] = await Promise.all([apiFetch(`${API_URL}/submissions`), apiFetch(`${API_URL}/agents`)])
+        if (!subsRes.ok) throw new Error('Failed to load submissions')
+        const body = await subsRes.json()
+        const agentsBody = agentsRes.ok ? await agentsRes.json() : []
         if (!cancelled) {
           setSubmissions(Array.isArray(body) ? body : [])
+          if (Array.isArray(agentsBody)) setAgentNames(agentsBody.map((a) => a.name))
           setError('')
         }
       } catch (err) {
@@ -109,8 +119,10 @@ export default function SpecialistQueue() {
 
   const saveField = (submission, field, value) => saveFields(submission, { [field]: value })
 
-  const takeOver = (submission) =>
-    saveFields(submission, { implementationSpecialist: user.name, configurationStatus: 'Not Started' })
+  const takeOver = (submission) => {
+    markSeen('newRequest', submission._id)
+    return saveFields(submission, { implementationSpecialist: user.name, configurationStatus: 'Not Started' })
+  }
 
   // One dropdown drives the whole specialist-side lifecycle, except the QA handoff itself —
   // picking "QA" opens the message-compose modal instead of saving directly, since that
@@ -248,6 +260,12 @@ export default function SpecialistQueue() {
                       return (
                         <tr key={s._id}>
                           <td>
+                            {(unseenIds.newRequest.has(s._id) || unseenIds.comment.has(s._id)) && (
+                              <span className="row-badges">
+                                {unseenIds.newRequest.has(s._id) && <span className="dash-nav-badge" title="New request" />}
+                                {unseenIds.comment.has(s._id) && <span className="dash-nav-badge comment" title="New comment" />}
+                              </span>
+                            )}
                             {s.clientName || 'Untitled'}
                             {s.isTestData && <span className="you-badge">test</span>}
                           </td>
@@ -260,51 +278,57 @@ export default function SpecialistQueue() {
                               <button type="button" className="btn-sm" disabled={savingId === s._id} onClick={() => takeOver(s)}>
                                 <i className="ti ti-hand-stop"></i> Take Over
                               </button>
-                            ) : (
-                              <input
-                                type="text"
-                                className="inline-edit-input"
-                                defaultValue={s.implementationSpecialist || ''}
+                            ) : isMine(s.implementationSpecialist, user?.name) ? (
+                              <SelectInput
+                                className="inline-edit-select"
+                                value={s.implementationSpecialist || ''}
                                 disabled={savingId === s._id}
-                                placeholder="Unassigned"
-                                onBlur={(e) => {
-                                  const value = e.target.value.trim()
-                                  if (value !== (s.implementationSpecialist || '')) saveField(s, 'implementationSpecialist', value)
-                                }}
+                                onChange={(v) => saveField(s, 'implementationSpecialist', v)}
+                                options={reassignOptions(agentNames, s.implementationSpecialist)}
                               />
+                            ) : (
+                              <span className="review-value">{s.implementationSpecialist}</span>
                             )}
                           </td>
                           <td>
-                            <select
+                            <SelectInput
                               className={`inline-edit-select${onHold ? ' hold' : ''}`}
                               value={s.configurationStatus || 'Not Started'}
-                              disabled={savingId === s._id || !s.implementationSpecialist || pastStage}
-                              onChange={(e) => changeStatus(s, e.target.value)}
-                            >
-                              {statusOptions.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
-                            </select>
+                              disabled={
+                                savingId === s._id ||
+                                !s.implementationSpecialist ||
+                                pastStage ||
+                                !isMine(s.implementationSpecialist, user?.name)
+                              }
+                              onChange={(v) => changeStatus(s, v)}
+                              options={statusOptions}
+                            />
                           </td>
                           <td>
-                            <select
+                            <SelectInput
                               className="inline-edit-select"
                               value={s.accountOnboarded || ''}
-                              disabled={savingId === s._id || !s.implementationSpecialist || status === 'COMPLETED'}
-                              onChange={(e) => saveField(s, 'accountOnboarded', e.target.value)}
-                            >
-                              {ACCOUNT_ONBOARDED_OPTIONS.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt || 'Not set'}
-                                </option>
-                              ))}
-                            </select>
+                              disabled={
+                                savingId === s._id ||
+                                !s.implementationSpecialist ||
+                                status === 'COMPLETED' ||
+                                !isMine(s.implementationSpecialist, user?.name)
+                              }
+                              onChange={(v) => saveField(s, 'accountOnboarded', v)}
+                              options={ACCOUNT_ONBOARDED_OPTIONS.map((opt) => ({ value: opt, label: opt || 'Not set' }))}
+                            />
                           </td>
                           <td>{s.qaAgent || '—'}</td>
                           <td className="dash-table-actions">
-                            <button type="button" className="btn-sm" onClick={() => setViewing(s)}>
+                            <button
+                              type="button"
+                              className="btn-sm"
+                              onClick={() => {
+                                setViewing(s)
+                                markSeen('newRequest', s._id)
+                                markSeen('comment', s._id)
+                              }}
+                            >
                               <i className="ti ti-eye"></i> View
                             </button>
                           </td>
@@ -319,7 +343,14 @@ export default function SpecialistQueue() {
         </CustomScrollbar>
       </main>
 
-      <SubmissionDetailModal submission={viewing} onClose={() => setViewing(null)} />
+      <SubmissionDetailModal
+        submission={viewing}
+        onClose={() => setViewing(null)}
+        onCommentPosted={(updated) => {
+          setViewing(updated)
+          setSubmissions((prev) => prev.map((s) => (s._id === updated._id ? updated : s)))
+        }}
+      />
 
       <MessageComposeModal
         open={!!handoffTarget}

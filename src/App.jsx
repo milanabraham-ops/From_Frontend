@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { ToastProvider } from './context/ToastContext'
+import { NotificationProvider } from './context/NotificationContext'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import RequireRole from './components/auth/RequireRole'
 import LoginPage from './components/auth/LoginPage'
@@ -21,93 +22,95 @@ function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/change-password" element={<ChangePasswordPage />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <StatsOverview />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/"
-                element={
-                  <RequireRole roles={['poc', 'admin']}>
-                    <Dashboard />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="/new"
-                element={
-                  <RequireRole roles={['poc', 'admin']}>
-                    <NewSubmissionEntry />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="/groups/:id"
-                element={
-                  <RequireRole roles={['poc', 'admin']}>
-                    <GroupDetail />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="/groups/:groupId/new"
-                element={
-                  <RequireRole roles={['poc', 'admin']}>
-                    <FormWizard mode="create" />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="/submissions/:id"
-                element={
-                  <ProtectedRoute>
-                    <FormWizard mode="edit" />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/specialist"
-                element={
-                  <RequireRole roles={['specialist', 'qa', 'admin']}>
-                    <SpecialistQueue />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="/qa"
-                element={
-                  <RequireRole roles={['qa', 'admin']}>
-                    <QAQueue />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <RequireRole roles={['admin']}>
-                    <AdminUsers />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="/admin/settings"
-                element={
-                  <RequireRole roles={['admin']}>
-                    <AdminSettings />
-                  </RequireRole>
-                }
-              />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </ToastProvider>
+          <NotificationProvider>
+            <ToastProvider>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/change-password" element={<ChangePasswordPage />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <StatsOverview />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/"
+                  element={
+                    <RequireRole roles={['poc', 'admin']}>
+                      <Dashboard />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/new"
+                  element={
+                    <RequireRole roles={['poc', 'admin']}>
+                      <NewSubmissionEntry />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/groups/:id"
+                  element={
+                    <RequireRole roles={['poc', 'admin']}>
+                      <GroupDetail />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/groups/:groupId/new"
+                  element={
+                    <RequireRole roles={['poc', 'admin']}>
+                      <FormWizard mode="create" />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/submissions/:id"
+                  element={
+                    <ProtectedRoute>
+                      <FormWizard mode="edit" />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/specialist"
+                  element={
+                    <RequireRole roles={['specialist', 'qa', 'admin']}>
+                      <SpecialistQueue />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/qa"
+                  element={
+                    <RequireRole roles={['qa', 'admin']}>
+                      <QAQueue />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <RequireRole roles={['admin']}>
+                      <AdminUsers />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/admin/settings"
+                  element={
+                    <RequireRole roles={['admin']}>
+                      <AdminSettings />
+                    </RequireRole>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </ToastProvider>
+          </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

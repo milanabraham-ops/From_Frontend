@@ -9,6 +9,7 @@ import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import CustomScrollbar from '../common/CustomScrollbar'
 import ConfirmDialog from '../common/ConfirmDialog'
+import SelectInput from '../common/SelectInput'
 
 function formatDate(value) {
   if (!value) return ''
@@ -288,14 +289,12 @@ export default function GroupDetail() {
                   <Link to={`/groups/${id}/new`} className="btn-sm">
                     <i className="ti ti-file-plus"></i> Start Blank
                   </Link>
-                  <select value={cloneFrom} onChange={(e) => setCloneFrom(e.target.value)}>
-                    <option value="">Clone from…</option>
-                    {locations.map((l) => (
-                      <option key={l._id} value={l._id}>
-                        {l.locationName || 'Untitled'}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectInput
+                    value={cloneFrom}
+                    onChange={setCloneFrom}
+                    placeholder="Clone from…"
+                    options={locations.map((l) => ({ value: l._id, label: l.locationName || 'Untitled' }))}
+                  />
                   <Link
                     to={cloneFrom ? `/groups/${id}/new?cloneFrom=${cloneFrom}` : '#'}
                     className={`btn-sm ${!cloneFrom ? 'disabled' : ''}`}

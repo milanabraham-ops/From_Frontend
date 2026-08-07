@@ -1,4 +1,9 @@
+import { PMS_OPTIONS } from '../../../data/options'
+import ComboBoxInput from '../ui/ComboBoxInput'
+
 export default function Step8LinksPms({ data, update }) {
+  const isCsVoicestack = data.environment === 'CS Voicestack'
+
   return (
     <div className="section visible">
       <div className="section-title">Links, Attachments & PMS</div>
@@ -39,12 +44,14 @@ export default function Step8LinksPms({ data, update }) {
       <div className="subsection-title">PMS Integration</div>
       <div className="field">
         <label>PMS System</label>
-        <input
-          type="text"
+        <ComboBoxInput
           value={data.pms}
-          placeholder="e.g. Carestack"
-          onChange={(e) => update('pms', e.target.value)}
+          onChange={(value) => update('pms', value)}
+          options={PMS_OPTIONS}
+          placeholder="e.g. CareStack"
+          disabled={isCsVoicestack}
         />
+        {isCsVoicestack && <div className="hint">CS Voicestack accounts are always connected to CareStack.</div>}
       </div>
       <div className="field">
         <label>Server Access Details</label>

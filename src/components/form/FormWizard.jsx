@@ -120,6 +120,21 @@ export default function FormWizard({ mode = 'create' }) {
     setData((prev) => (prev.textUnification ? prev : { ...prev, textUnification: 'Yes' }))
   }, [data.environment])
 
+  // CS Voicestack accounts are, by definition, connected to the CareStack PMS (that's what the
+  // "CS" prefix means). Unlike Text Unification above, this one also clears back to blank when
+  // switching away from CS Voicestack — otherwise toggling Environment back and forth leaves a
+  // stale "CareStack" sitting in the field. Only clears a value that matches exactly what this
+  // effect itself would have set, and only while creating — never touches a real saved value
+  // while editing an existing submission.
+  useEffect(() => {
+    if (isEditMode) return
+    if (data.environment === 'CS Voicestack') {
+      setData((prev) => (prev.pms ? prev : { ...prev, pms: 'CareStack' }))
+    } else {
+      setData((prev) => (prev.pms === 'CareStack' ? { ...prev, pms: '' } : prev))
+    }
+  }, [isEditMode, data.environment])
+
   const update = (keyOrPatch, value) => {
     if (typeof keyOrPatch === 'object') {
       setData((prev) => ({ ...prev, ...keyOrPatch }))

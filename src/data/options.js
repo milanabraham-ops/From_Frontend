@@ -12,19 +12,19 @@ export const STEP_LABELS = [
 
 export const TOTAL_STEPS = STEP_LABELS.length
 
+// Suggestions only, not a locked enum — the field stays a free-text input (a timezone we haven't
+// listed yet should never be blocked from being typed in).
 export const TIMEZONES = [
-  'Eastern Time (ET), UTC-5/4',
-  'Central Time (CT), UTC-6/5',
-  'Mountain Time (MT), UTC-7/6',
-  'Mountain Standard Time (MST, no DST), UTC-7',
-  'Pacific Time (PT), UTC-8/7',
-  'Alaska Time (AKT), UTC-9/8',
-  'Hawaii-Aleutian Time (HAT), UTC-10/9',
-  'Hawaii Standard Time (HST, no DST), UTC-10',
-  'Samoa Standard Time, UTC-11',
-  'Chamorro Standard Time, UTC+10',
-  'Atlantic Time (AT), UTC-4/3',
-  'Puerto Rico, UTC-4',
+  'India Standard Time',
+  'UTC',
+  'Canada Central Standard Time',
+  'US Mountain Standard Time',
+  'Eastern Standard Time',
+  'Central Standard Time',
+  'Hawaiian Standard Time',
+  'Mountain Standard Time',
+  'Pacific Standard Time',
+  'Alaskan Standard Time',
 ]
 
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
@@ -90,7 +90,30 @@ export const WORKFLOW_ACTIONS = [
   'None',
 ]
 
-export const CARD_ASSIGNMENT_OPTIONS = ['Answered Agent', 'Round Robin']
+export const CARD_ASSIGNMENT_OPTIONS = ['Answered Agent', 'Round Robin', 'Enable All']
+
+// Suggestions only, not a locked enum — the field stays a free-text input (a new PMS we haven't
+// worked with yet should never be blocked from being typed in).
+export const PMS_OPTIONS = [
+  'Bitwerx',
+  'CareStack',
+  'CurveDental',
+  'Dentally',
+  'Denticon',
+  'DenticonProxy',
+  'DentrixAscend',
+  'DentrixCore',
+  'EagleSoft',
+  'EmpowerEMR',
+  'EyeCloudPro',
+  'NexHealth',
+  'OpenDental',
+  'PromptEMR',
+  'RevolutionEHR',
+  'Rhapsody',
+  'Vetspire',
+  'Zavy360',
+]
 
 const emptyQueueDetail = () => ({
   onholdType: '',
@@ -146,6 +169,7 @@ export const initialFormData = {
   // Step 3
   phoneTree: '',
   callFlow: '',
+  afterHoursPhoneTree: '',
   afterHoursCondition: '',
   // Step 4
   audioLanguage: '',

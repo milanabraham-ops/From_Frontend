@@ -1,4 +1,5 @@
 import RadioGroup from '../ui/RadioGroup'
+import ComboBoxInput from '../ui/ComboBoxInput'
 import { MARKETS, TIMEZONES } from '../../../data/options'
 
 export default function Step1Account({ data, update }) {
@@ -110,12 +111,12 @@ export default function Step1Account({ data, update }) {
           <label>
             Timezone <span className="req">*</span>
           </label>
-          <select value={data.timezone} onChange={(e) => update('timezone', e.target.value)}>
-            <option value="">Select timezone…</option>
-            {TIMEZONES.map((tz) => (
-              <option key={tz}>{tz}</option>
-            ))}
-          </select>
+          <ComboBoxInput
+            value={data.timezone}
+            onChange={(value) => update('timezone', value)}
+            options={TIMEZONES}
+            placeholder="e.g. Eastern Standard Time"
+          />
         </div>
       </div>
 

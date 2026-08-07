@@ -1,4 +1,5 @@
 import { REVIEW_SECTIONS, STATUS_SECTION } from '../form/reviewSections'
+import ReviewFieldValue from '../form/ReviewFieldValue'
 
 function Section({ section, submission }) {
   return (
@@ -12,7 +13,9 @@ function Section({ section, submission }) {
           return (
             <div className="review-row" key={f.label}>
               <span className="review-label">{f.label}</span>
-              <span className={`review-value${value ? '' : ' empty'}`}>{value || 'Not provided'}</span>
+              <span className={`review-value${value ? '' : ' empty'}`}>
+                <ReviewFieldValue value={value} />
+              </span>
             </div>
           )
         })}

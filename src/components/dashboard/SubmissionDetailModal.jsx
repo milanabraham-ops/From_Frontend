@@ -1,11 +1,12 @@
 import SubmissionDetailSections from './SubmissionDetailSections'
+import CommentThread from '../common/CommentThread'
 
 function formatDate(value) {
   if (!value) return ''
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-export default function SubmissionDetailModal({ submission, onClose }) {
+export default function SubmissionDetailModal({ submission, onClose, onCommentPosted }) {
   if (!submission) return null
 
   return (
@@ -25,6 +26,7 @@ export default function SubmissionDetailModal({ submission, onClose }) {
 
         <div className="detail-modal-body">
           <SubmissionDetailSections submission={submission} />
+          <CommentThread submission={submission} onPosted={onCommentPosted} />
         </div>
       </div>
     </div>

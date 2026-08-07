@@ -1,0 +1,57 @@
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+
+// Shared positioning + dismissal logic for SelectInput/ComboBoxInput's popup menus. The menu is
+// rendered via a portal into document.body (see both components) so it can visually escape an
+// ancestor with overflow:auto/hidden — e.g. a horizontally-scrolling table wrapper — which a
+// plain position:absolute child never can, since it's still clipped by that ancestor regardless.
+// position:fixed + getBoundingClientRect() coordinates place it correctly without that problem;
+// scrolling while open just closes it rather than trying to track the anchor in real time.
+export function useDropdown() {
+  const [open, setOpen] = useState(false)
+  const anchorRef = useRef(null)
+  const menuRef = useRef(null)
+  const [style, setStyle] = useState(null)
+
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current) return
+    const rect = anchorRef.current.getBoundingClientRect()
+    const width = Math.max(rect.width, 160)
+    const margin = 8
+    // The forced 160px minimum can be wider than a narrow table cell's own trigger — without
+    // clamping, that extra width (or a trigger sitting near the edge of the viewport/scroll
+    // wrapper) pushes the menu past the viewport edge, where it visually bleeds into whatever's
+    // next to it instead of sitting cleanly under the field.
+    let left = rect.left
+    if (left + width > window.innerWidth - margin) left = Math.max(margin, window.innerWidth - margin - width)
+
+    const style = { position: 'fixed', left, minWidth: width }
+    // Same idea vertically: if there isn't reasonable room below the trigger (and there's more
+    // room above), open upward from the trigger's top instead of downward off the bottom edge.
+    const spaceBelow = window.innerHeight - rect.bottom
+    if (spaceBelow < 160 && rect.top > spaceBelow) style.bottom = window.innerHeight - rect.top + 4
+    else style.top = rect.bottom + 4
+    setStyle(style)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    const onClickAway = (e) => {
+      if (anchorRef.current?.contains(e.target)) return
+      if (menuRef.current?.contains(e.target)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickAway)
+    // Scroll events don't bubble, so the capture phase is required to hear a scroll happening
+    // inside any ancestor (e.g. the table's own horizontal scroller), not just window-level ones.
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('mousedown', onClickAway)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [open])
+
+  return { open, setOpen, anchorRef, menuRef, style }
+}

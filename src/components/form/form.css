@@ -157,7 +157,7 @@
 
 .voicestack-form input[type=text], .voicestack-form input[type=number], .voicestack-form input[type=email],
 .voicestack-form input[type=url], .voicestack-form input[type=date], .voicestack-form input[type=time],
-.voicestack-form textarea, .voicestack-form select {
+.voicestack-form textarea, .voicestack-form select, .voicestack-form .select-input-trigger {
   width: 100%;
   padding: 9px 12px;
   font-size: 14px;
@@ -170,11 +170,65 @@
   outline: none;
 }
 .voicestack-form input::placeholder, .voicestack-form textarea::placeholder { color: var(--text3); }
-.voicestack-form input:focus, .voicestack-form textarea:focus, .voicestack-form select:focus {
+.voicestack-form input:focus, .voicestack-form textarea:focus, .voicestack-form select:focus,
+.voicestack-form .select-input-trigger:focus {
   border-color: var(--accent);
 }
 .voicestack-form textarea { min-height: 85px; resize: vertical; }
 .voicestack-form select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
+
+.voicestack-form .combobox-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+}
+.voicestack-form .combobox-input:disabled { opacity: .6; cursor: not-allowed; background-image: none; padding-right: 12px; }
+
+/* SelectInput's trigger is a <button>, unlike ComboBoxInput's <input> — browsers give buttons
+   their own default chrome (flat grey background, faint border) that a plain class selector
+   can't override unless the button is explicitly included in the rules that set it, which is why
+   .select-input-trigger is added directly into the base field rule and its :focus variant above,
+   rather than relying on .combobox-input/.inline-edit-select alone (those only ever added the
+   chevron/sizing on top of a base an <input>/<select> already had for free — a <button> never
+   did). This block just resets the remaining structural button quirks (centered text, no width,
+   no font inheritance) that those rules don't cover. */
+.voicestack-form .select-input-trigger {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.voicestack-form .select-input-trigger:disabled { cursor: not-allowed; }
+.voicestack-form .select-input-placeholder { color: var(--text3); }
+.voicestack-form .combobox-menu {
+  /* position/top/left/minWidth are set inline (see useDropdown.js) — computed from the trigger's
+     actual on-screen position via getBoundingClientRect(), since this renders through a portal. */
+  z-index: 1500;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-popover);
+  padding: 4px;
+}
+.voicestack-form .combobox-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.voicestack-form .combobox-option:hover { background: var(--bg3); }
+.voicestack-form .combobox-option.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
 
 /* Grid */
 .voicestack-form .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -432,6 +486,22 @@
 .voicestack-form .review-label { color: var(--text3); min-width: 220px; flex-shrink: 0; }
 .voicestack-form .review-value { color: var(--text); flex: 1; min-width: 0; word-break: break-word; white-space: pre-line; }
 .voicestack-form .review-value.empty { color: var(--text3); font-style: italic; }
+.voicestack-form .review-value a { color: var(--accent); text-decoration: underline; }
+.voicestack-form .review-value a:hover { color: var(--accent-hover); }
+
+/* Comment thread */
+.voicestack-form .comment-list { display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow-y: auto; margin-bottom: 12px; }
+.voicestack-form .comment-row { padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); }
+.voicestack-form .comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.voicestack-form .comment-author { font-size: 13px; font-weight: 600; color: var(--text); }
+.voicestack-form .comment-role-badge {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em;
+  padding: 1px 7px; border-radius: 20px; background: var(--bg3); color: var(--text3);
+}
+.voicestack-form .comment-time { font-size: 11px; color: var(--text3); margin-left: auto; }
+.voicestack-form .comment-text { font-size: 13px; color: var(--text2); white-space: pre-wrap; word-break: break-word; }
+.voicestack-form .comment-add-row { display: flex; gap: 8px; align-items: flex-end; }
+.voicestack-form .comment-input { flex: 1; min-height: 44px; resize: vertical; }
 
 /* Dashboard */
 .voicestack-form .dash-empty {
@@ -487,6 +557,19 @@
   background: #fff;
 }
 .voicestack-form .dash-nav-item i { font-size: 17px; flex-shrink: 0; }
+.voicestack-form .dash-nav-badges { display: flex; gap: 5px; margin-left: auto; flex-shrink: 0; }
+.voicestack-form .dash-nav-badge {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ff8a8d, #e5484d 55%, #c72e33);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+.voicestack-form .dash-nav-badge.comment {
+  background: radial-gradient(circle at 30% 30%, #8dffb0, #35c46a 55%, #1f8f4a);
+}
+/* Same dots, inline in a table row — so someone scanning the list can tell exactly which row
+   triggered the sidebar badge, instead of just knowing "something" changed. */
+.voicestack-form .row-badges { display: inline-flex; gap: 4px; margin-right: 7px; vertical-align: middle; }
 
 /* The sidebar is always violet regardless of theme, so it always needs the light-text logo —
    independent of the light/dark logo swap used on the auth pages' own (non-colored) .brand. */
@@ -666,6 +749,7 @@
 
 .voicestack-form .add-location-panel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .voicestack-form .add-location-panel select { width: auto; padding: 7px 28px 7px 10px; font-size: 13px; }
+.voicestack-form .add-location-panel .select-input-trigger { width: auto; padding: 7px 28px 7px 10px; font-size: 13px; }
 .voicestack-form .btn-sm.disabled { opacity: .5; pointer-events: none; }
 .voicestack-form .group-badge {
   display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px;

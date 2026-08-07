@@ -7,6 +7,7 @@ import Sidebar from '../common/Sidebar'
 import TopUserBar from '../common/TopUserBar'
 import CustomScrollbar from '../common/CustomScrollbar'
 import ConfirmDialog from '../common/ConfirmDialog'
+import SelectInput from '../common/SelectInput'
 import '../form/form.css'
 
 const ROLES = ['poc', 'specialist', 'qa', 'admin']
@@ -207,17 +208,12 @@ export default function AdminUsers() {
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 />
-                <select
+                <SelectInput
                   className="inline-edit-select"
                   value={form.role}
-                  onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                >
-                  {ROLES.map((role) => (
-                    <option key={role} value={role}>
-                      {ROLE_LABELS[role]}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setForm((f) => ({ ...f, role: v }))}
+                  options={ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] }))}
+                />
                 <label className="show-own-toggle">
                   <input
                     type="checkbox"
@@ -284,18 +280,13 @@ export default function AdminUsers() {
                         <td>{u.email}</td>
                         <td>{formatDate(u.createdAt)}</td>
                         <td>
-                          <select
+                          <SelectInput
                             className="inline-edit-select"
                             value={u.role}
                             disabled={savingId === u.id || u.id === currentUser?.id}
-                            onChange={(e) => changeRole(u, e.target.value)}
-                          >
-                            {ROLES.map((role) => (
-                              <option key={role} value={role}>
-                                {ROLE_LABELS[role]}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(v) => changeRole(u, v)}
+                            options={ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] }))}
+                          />
                         </td>
                         <td className="dash-table-actions">
                           <button

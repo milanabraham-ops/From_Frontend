@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import SubmissionDetailSections from './SubmissionDetailSections'
 import MessageComposeModal from '../common/MessageComposeModal'
 import ConfirmDialog from '../common/ConfirmDialog'
+import CommentThread from '../common/CommentThread'
 import { QA_CHECKLIST_ITEMS } from '../../data/options'
 
 function formatDate(value) {
@@ -10,20 +11,16 @@ function formatDate(value) {
 }
 
 // Merges this account's saved checklist against the current shared template — any item added to
-// the template since this account was last reviewed shows up here too (blank, ready to review),
-// while anything the account already has that's since fallen off the template is still kept
-// rather than silently dropping prior QA work.
+// the template since this account was last reviewed shows up here too (blank, ready to review).
+// Anything the account already has that's since fallen off the template (removed/renamed) is
+// dropped rather than kept — the checklist always mirrors the current template exactly.
 function buildChecklist(templateItems, existingChecklist) {
   const items = templateItems && templateItems.length ? templateItems : QA_CHECKLIST_ITEMS
   const existingByName = new Map((existingChecklist || []).map((row) => [row.item.toLowerCase(), row]))
-  const merged = items.map((item) => {
+  return items.map((item) => {
     const existing = existingByName.get(item.toLowerCase())
     return existing ? { ...existing } : { item, status: '', note: '' }
   })
-  for (const row of existingChecklist || []) {
-    if (!items.some((t) => t.toLowerCase() === row.item.toLowerCase())) merged.push({ ...row })
-  }
-  return merged
 }
 
 // Mirrors chatService.js's checklistSummary on the backend — used to seed the editable default
@@ -43,7 +40,18 @@ function checklistSummary(checklist) {
 // The single place a QA reviewer works from: the account's full configuration (read-only,
 // same sections as the plain detail view) plus the QA checklist, so completing an account
 // never requires switching between a "view details" modal and a separate "checklist" modal.
-export default function QAReviewModal({ submission, taken, alreadyComplete, busy, templateItems, onAddTemplateItem, onClose, onMarkComplete }) {
+export default function QAReviewModal({
+  submission,
+  taken,
+  alreadyComplete,
+  busy,
+  templateItems,
+  baseItems = [],
+  onAddTemplateItem,
+  onClose,
+  onMarkComplete,
+  onCommentPosted,
+}) {
   const [checklist, setChecklist] = useState(() => buildChecklist(templateItems, submission?.qaChecklist))
   const [newItem, setNewItem] = useState('')
   const [addingItem, setAddingItem] = useState(false)
@@ -56,6 +64,20 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
     if (submission) setChecklist(buildChecklist(templateItems, submission.qaChecklist))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submission?._id])
+
+  // This modal is always mounted (the parent renders it unconditionally and just relies on the
+  // `if (!submission) return null` below), so without this its own interaction state — most
+  // importantly the "QA Result" compose popup — would survive across opens. Left over from a
+  // previous completion, it would resurface immediately the next time this opens for anything,
+  // recheck included, instead of a clean view.
+  useEffect(() => {
+    if (submission) return
+    setComposingResult(false)
+    setResultMessage('')
+    setNewItem('')
+    setAddItemError('')
+    setPendingRemoveIndex(null)
+  }, [submission])
 
   if (!submission) return null
 
@@ -138,7 +160,11 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
                 {reviewedCount} of {checklist.length} reviewed
               </span>
             </div>
-            {checklist.map((row, i) => (
+            {checklist.map((row, i) => {
+              // A base item is the same checklist for every agent, so it can't be removed —
+              // only an item a specific agent added themselves (not part of baseItems) can be.
+              const isBaseItem = baseItems.some((b) => b.toLowerCase() === row.item.toLowerCase())
+              return (
               <div className="qa-checklist-row" key={row.item}>
                 <div className="qa-checklist-item-name">{row.item}</div>
                 <div className="qa-checklist-choices">
@@ -178,15 +204,17 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
                   >
                     <i className="ti ti-minus"></i>
                   </button>
-                  <button
-                    type="button"
-                    className="btn-sm danger"
-                    title="Remove this item from the checklist"
-                    disabled={locked}
-                    onClick={() => setPendingRemoveIndex(i)}
-                  >
-                    <i className="ti ti-trash"></i>
-                  </button>
+                  {!isBaseItem && (
+                    <button
+                      type="button"
+                      className="btn-sm danger"
+                      title="Remove this item from the checklist"
+                      disabled={locked}
+                      onClick={() => setPendingRemoveIndex(i)}
+                    >
+                      <i className="ti ti-trash"></i>
+                    </button>
+                  )}
                 </div>
                 {(row.status === 'error' || row.status === 'clarification') && (
                   <textarea
@@ -198,7 +226,8 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
                   />
                 )}
               </div>
-            ))}
+              )
+            })}
 
             <div className="qa-checklist-add-row">
               <input
@@ -221,6 +250,8 @@ export default function QAReviewModal({ submission, taken, alreadyComplete, busy
             </div>
             {addItemError && <div className="hint">{addItemError}</div>}
           </div>
+
+          <CommentThread submission={submission} onPosted={onCommentPosted} />
         </div>
 
         <div style={{ marginTop: 12, flexShrink: 0 }}>
